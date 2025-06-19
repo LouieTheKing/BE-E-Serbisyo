@@ -14,17 +14,17 @@ return new class extends Migration
         Schema::create('certificate_logs', function (Blueprint $table) {
             $table->id();
 
-            $table->foreign('requestor')
+            $table->foreignId('requestor')
                     ->references('id')
                     ->on('accounts')
                     ->onUpdate('cascade');
 
-            $table->foreign('staff')
+            $table->foreignId('staff')
                     ->references('id')
                     ->on('accounts')
                     ->onUpdate('cascade');
 
-            $table->foreign('document')
+            $table->foreignId('document')
                     ->references('id')
                     ->on('documents')
                     ->onUpdate('cascade');

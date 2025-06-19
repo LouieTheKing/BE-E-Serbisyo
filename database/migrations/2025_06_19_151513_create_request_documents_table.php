@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::create('request_documents', function (Blueprint $table) {
             $table->id();
-            $table->foreign('requestor')
+            $table->foreignId('requestor')
                     ->references('id')
                     ->on('accounts')
                     ->onUpdate('cascade');
 
-            $table->foreign('document')
+            $table->foreignId('document')
                     ->references('id')
                     ->on('documents')
                     ->onUpdate('cascade');

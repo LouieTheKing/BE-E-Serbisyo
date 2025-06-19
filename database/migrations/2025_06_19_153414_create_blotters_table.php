@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('location');
             $table->date('incident_date');
 
-            $table->foreign('reporter')
+            $table->foreignId('reporter')
                     ->references('id')
                     ->on('accounts')
                     ->onUpdate('cascade');

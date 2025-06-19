@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('feedbacks', function (Blueprint $table) {
             $table->id();
 
-            $table->foreign('user')
+            $table->foreignId('user')
                     ->references('id')
                     ->on('accounts')
                     ->onUpdate('cascade');
