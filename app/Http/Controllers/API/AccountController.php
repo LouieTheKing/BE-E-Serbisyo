@@ -112,4 +112,21 @@ class AccountController extends Controller
         }
         return response()->json($user);
     }
+
+    // 6. Get all accounts with pagination and filter for type and status
+    public function index(Request $request)
+    {
+        $perPage = $request->query('per_page', 10);
+        $query = Account::query();
+
+        if ($request->has('type')) {
+            $query->where('type', $request->query('type'));
+        }
+        if ($request->has('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
+        $accounts = $query->paginate($perPage);
+        return response()->json($accounts);
+    }
 }
