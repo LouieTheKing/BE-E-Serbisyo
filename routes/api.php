@@ -6,6 +6,7 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\AccountController;
 use App\Http\Controllers\API\DocumentsController;
 use App\Http\Controllers\API\RequestDocumentController;
+use App\Http\Controllers\API\CertificateLogsController;
 
 // Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -33,6 +34,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/request-documents/{id}', [RequestDocumentController::class, 'show']);
     Route::post('/request-documents/create', [RequestDocumentController::class, 'store']);
     Route::put('/request-documents/status/{id}', [RequestDocumentController::class, 'changeStatus']);
+
+    // Certificate Logs Routes
+    Route::post('/certificate-logs/create', [CertificateLogsController::class, 'create']);
+    Route::get('/certificate-logs', [CertificateLogsController::class, 'index']);
+    Route::get('/certificate-logs/{id}', [CertificateLogsController::class, 'show']);
 });
 
 // Temporary bug fix sa Route [Login]

@@ -10,24 +10,18 @@ class CertificateLog extends Model
     use HasFactory;
 
     protected $fillable = [
-        'requestor',
+        'document_request',
         'staff',
-        'document',
         'remark'
     ];
 
-    public function requestorAccount()
+    public function documentRequest()
     {
-        return $this->belongsTo(Account::class, 'requestor');
+        return $this->belongsTo(RequestDocument::class, 'document_request');
     }
 
     public function staffAccount()
     {
         return $this->belongsTo(Account::class, 'staff');
-    }
-
-    public function document()
-    {
-        return $this->belongsTo(Document::class, 'document');
     }
 }
