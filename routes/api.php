@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\AccountController;
 use App\Http\Controllers\API\DocumentsController;
+use App\Http\Controllers\API\RequestDocumentController;
 
 // Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -26,6 +27,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/documents/create', [DocumentsController::class, 'store']);
     Route::put('/documents/update/{id}', [DocumentsController::class, 'update']);
     Route::delete('/documents/destroy/{id}', [DocumentsController::class, 'destroy']);
+
+    // Request Document Routes
+    Route::get('/request-documents', [RequestDocumentController::class, 'index']);
+    Route::get('/request-documents/{id}', [RequestDocumentController::class, 'show']);
+    Route::post('/request-documents/create', [RequestDocumentController::class, 'store']);
+    Route::put('/request-documents/status/{id}', [RequestDocumentController::class, 'changeStatus']);
 });
 
 // Temporary bug fix sa Route [Login]
