@@ -1,4 +1,4 @@
----
 deployment:
   tasks:
-    - /bin/rsync -av --exclude='.git' ./ /home/blddxvid/public_html/
+    - export DEPLOYPATH=/home/blddxvid/public_html/
+    - /bin/cp -R images $DEPLOYPATH
