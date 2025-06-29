@@ -34,7 +34,10 @@ class Account extends Authenticatable
         'barangay',
         'house_no',
         'zip_code',
-        'street'
+        'street',
+        'pwd_number',
+        'single_parent_number',
+        'profile_picture_path',
     ];
 
     protected $hidden = [

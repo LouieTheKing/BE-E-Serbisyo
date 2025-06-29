@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('status')->default('active'); // active or inactive
+            $table->string('status')->default('pending'); // active, inactive, pending
             $table->string('type')->default('staff'); // admin, staff, residence
 
             // Personal Information
@@ -28,6 +28,9 @@ return new class extends Migration
             $table->date('birthday');
             $table->string('contact_no');
             $table->string('birth_place');
+            $table->string('pwd_number')->nullable()->default(null);
+            $table->string('single_parent_number')->nullable()->default(null);
+            $table->string('profile_picture_path')->nullable()->default(null);
 
             // Other Information
             $table->string('municipality');

@@ -27,7 +27,9 @@ class AccountController extends Controller
                 'house_no' => 'required|string',
                 'zip_code' => 'required|string',
                 'street' => 'required|string',
-                'type' => 'required|string|in:residence,admin,staff'
+                'type' => 'required|string|in:residence,admin,staff',
+                'pwd_number' => 'nullable|string',
+                'single_parent_number' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -37,7 +39,7 @@ class AccountController extends Controller
             $account = Account::findOrFail($id);
             $account->update($request->only([
                 'first_name', 'middle_name', 'last_name', 'suffix', 'sex', 'nationality', 'birthday', 'contact_no', 'birth_place',
-                'municipality', 'barangay', 'house_no', 'zip_code', 'street', 'type'
+                'municipality', 'barangay', 'house_no', 'zip_code', 'street', 'type', 'pwd_number', 'single_parent_number'
             ]));
 
             return response()->json(['message' => 'Account information updated successfully', 'account' => $account]);
@@ -51,7 +53,7 @@ class AccountController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'status' => 'required|in:active,inactive',
+                'status' => 'required|in:active,inactive,pending',
             ]);
 
             if ($validator->fails()) {
@@ -128,5 +130,42 @@ class AccountController extends Controller
 
         $accounts = $query->paginate($perPage);
         return response()->json($accounts);
+    }
+
+    // 7. Reject (delete) account
+    public function rejectAccount($id)
+    {
+        try {
+            $account = Account::findOrFail($id);
+            $account->delete();
+            return response()->json(['message' => 'Account rejected and deleted successfully']);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // 8. Update profile picture
+    public function updateProfilePicture(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'profile_picture' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()], 422);
+            }
+
+            $account = Account::findOrFail($id);
+            $file = $request->file('profile_picture');
+            $filename = 'profile_' . $id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('profile_pictures', $filename, 'public');
+            $account->profile_picture_path = '/storage/' . $path;
+            $account->save();
+
+            return response()->json(['message' => 'Profile picture updated successfully', 'profile_picture_path' => $account->profile_picture_path]);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

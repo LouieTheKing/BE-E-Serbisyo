@@ -30,20 +30,31 @@ class AuthController extends Controller
                 'house_no' => 'required|string',
                 'zip_code' => 'required|string',
                 'street' => 'required|string',
-                'type' => 'required|string|in:residence,admin,staff'
+                'type' => 'required|string|in:residence,admin,staff',
+                'pwd_number' => 'nullable|string',
+                'single_parent_number' => 'nullable|string',
+                'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()], 422);
             }
 
+            $profilePicturePath = null;
+            if ($request->hasFile('profile_picture')) {
+                $file = $request->file('profile_picture');
+                $filename = 'profile_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('profile_pictures', $filename, 'public');
+                $profilePicturePath = '/storage/' . $path;
+            }
+
             $account = Account::create([
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'first_name' => $request->first_name,
-                'middle_name' => $request->middle_name,
+                'middle_name' => $request->middle_name ?? null,
                 'last_name' => $request->last_name,
-                'suffix' => $request->suffix,
+                'suffix' => $request->suffix ?? null,
                 'sex' => $request->sex,
                 'nationality' => $request->nationality ?? 'Filipino',
                 'birthday' => $request->birthday,
@@ -54,7 +65,11 @@ class AuthController extends Controller
                 'house_no' => $request->house_no,
                 'zip_code' => $request->zip_code,
                 'street' => $request->street,
-                'type' => $request->type
+                'type' => $request->type,
+                'status' => $request->status,
+                'pwd_number' => $request->pwd_number ?? null,
+                'single_parent_number' => $request->single_parent_number ?? null,
+                'profile_picture_path' => $profilePicturePath,
             ]);
 
             return response()->json(['message' => 'Registration successful', 'account' => $account], 201);
