@@ -14,7 +14,8 @@ class Official extends Model
         'position',
         'image_path',
         'term_start',
-        'term_end'
+        'term_end',
+        'status'
     ];
 
     protected $casts = [

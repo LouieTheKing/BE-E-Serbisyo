@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('image_path');
             $table->date('term_start');
             $table->date('term_end');
+            $table->string('status'); // active or inactive
             $table->timestamps();
         });
     }
