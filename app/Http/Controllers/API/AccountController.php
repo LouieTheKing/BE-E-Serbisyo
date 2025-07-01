@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Account;
+use App\Models\RejectedAccount;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Exception;
@@ -133,10 +134,22 @@ class AccountController extends Controller
     }
 
     // 7. Reject (delete) account
-    public function rejectAccount($id)
+    public function rejectAccount(Request $request, $id)
     {
         try {
             $account = Account::findOrFail($id);
+            $rejectedData = $account->toArray();
+            // Ensure password is included
+            $rejectedData['password'] = $account->getOriginal('password');
+            unset($rejectedData['id']); // Let the rejected_accounts table auto-increment its own id
+
+            // Check if reason is provided
+            if (!$request->has('reason') || is_null($request->input('reason'))) {
+                return response()->json(['error' => ['reason' => ['Reason is required.']]], 422);
+            }
+
+            $rejectedData['reason'] = $request->input('reason');
+            RejectedAccount::create($rejectedData);
             $account->delete();
             return response()->json(['message' => 'Account rejected and deleted successfully']);
         } catch (Exception $e) {

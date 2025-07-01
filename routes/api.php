@@ -7,6 +7,7 @@ use App\Http\Controllers\API\AccountController;
 use App\Http\Controllers\API\DocumentsController;
 use App\Http\Controllers\API\RequestDocumentController;
 use App\Http\Controllers\API\CertificateLogsController;
+use App\Http\Controllers\API\RejectedAccountController;
 
 // Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -48,6 +49,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/officials/update/status/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'updateStatus']);
     Route::get('/officials/get', [\App\Http\Controllers\API\OfficialsController::class, 'index']);
     Route::get('/officials/get/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'show']);
+
+    // Rejected Accounts Routes
+    Route::get('/rejected-accounts', [RejectedAccountController::class, 'index']);
 });
 
 // Temporary bug fix sa Route [Login]
