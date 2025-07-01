@@ -41,6 +41,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/certificate-logs/create', [CertificateLogsController::class, 'create']);
     Route::get('/certificate-logs', [CertificateLogsController::class, 'index']);
     Route::get('/certificate-logs/{id}', [CertificateLogsController::class, 'show']);
+
+    // Officials Routes
+    Route::post('/officials/create', [\App\Http\Controllers\API\OfficialsController::class, 'store']);
+    Route::post('/officials/update/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'update']);
+    Route::post('/officials/update/status/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'updateStatus']);
+    Route::get('/officials/get', [\App\Http\Controllers\API\OfficialsController::class, 'index']);
+    Route::get('/officials/get/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'show']);
 });
 
 // Temporary bug fix sa Route [Login]
