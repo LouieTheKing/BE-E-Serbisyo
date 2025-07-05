@@ -112,8 +112,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            // If using Sanctum or Passport, revoke token here
-            // $request->user()->currentAccessToken()->delete();
+            $request->user()->currentAccessToken()->delete();
             return response()->json(['message' => 'Logout successful']);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
