@@ -8,6 +8,10 @@ use App\Http\Controllers\API\DocumentsController;
 use App\Http\Controllers\API\RequestDocumentController;
 use App\Http\Controllers\API\CertificateLogsController;
 use App\Http\Controllers\API\RejectedAccountController;
+use App\Http\Controllers\API\AnnouncementController;
+use App\Http\Controllers\API\BlotterController;
+use App\Http\Controllers\API\FeedbackController;
+use App\Http\Controllers\API\activityLogsController;
 
 // Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -52,6 +56,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rejected Accounts Routes
     Route::get('/rejected-accounts', [RejectedAccountController::class, 'index']);
+
+    // Announcement Routes
+    Route::get('/announcements', [AnnouncementController::class, 'index']);       // paginated + filter
+    Route::post('/announcements/create', [AnnouncementController::class, 'store']);
+    Route::post('/announcements/show', [AnnouncementController::class, 'show']);
+    Route::put('/announcements/update', [AnnouncementController::class, 'update']);
+    Route::delete('/announcements/delete', [AnnouncementController::class, 'destroy']);
+
+    // Blotter Routes
+    Route::get('/blotters', [BlotterController::class, 'index']);
+    Route::post('/blotters/create', [BlotterController::class, 'store']);
+    Route::post('/blotters/show', [BlotterController::class, 'show']);
+    Route::put('/blotters/update', [BlotterController::class, 'update']);
+    Route::delete('/blotters/delete', [BlotterController::class, 'destroy']);
+
+    // Feedback routes
+    Route::get('/feedback', [FeedbackController::class, 'index']);
+    Route::post('/feedback/create', [FeedbackController::class, 'store']);
+    Route::post('/feedback/update', [FeedbackController::class, 'update']);
+    Route::post('/feedback/delete', [FeedbackController::class, 'destroy']);
+
+    // Activity Logs Routes
+    Route::get('/activitylogs', [activityLogsController::class, 'index']);
+    Route::post('/activitylogs/create', [activityLogsController::class, 'store']);
 });
 
 // Temporary bug fix sa Route [Login]
