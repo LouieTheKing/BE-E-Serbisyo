@@ -16,6 +16,8 @@ class Feedback extends Model
         'rating'
     ];
 
+    protected $table = "feedbacks";
+
     public function account()
     {
         return $this->belongsTo(Account::class, 'user');
