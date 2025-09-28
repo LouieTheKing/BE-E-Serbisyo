@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Validator;
 class FeedbackController extends Controller
 {
     /**
-     * Display a listing of feedbacks with pagination and filters.
+     * Display a listing of feedbacks with pagination, filters, and sorting.
      */
     public function index(Request $request)
     {
@@ -33,13 +33,27 @@ class FeedbackController extends Controller
             $query->where('remarks', 'like', '%' . $request->search . '%');
         }
 
-        $feedbacks = $query->paginate($request->get('per_page', 10));
+        // Sorting
+        $sortBy = $request->query('sort_by', 'created_at'); // default sort by creation date
+        $order = $request->query('order', 'desc'); // default descending
+
+        $allowedSorts = ['created_at', 'rating', 'category', 'user', 'remarks', 'module'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
+        $query->orderBy($sortBy, $order);
+
+        // Pagination
+        $perPage = $request->query('per_page', 10);
+        $feedbacks = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'data' => $feedbacks
         ]);
     }
+
 
     /**
      * Store a newly created feedback.
