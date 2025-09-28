@@ -85,11 +85,12 @@ class RequestDocumentController extends Controller
         }
     }
 
-    // 3. Get all with filters and pagination
+    // 3. Get all with filters, pagination, and sorting
     public function index(Request $request)
     {
         $query = RequestDocument::query();
 
+        // Filters
         if ($request->has('status')) {
             $query->where('status', $request->input('status'));
         }
@@ -100,11 +101,25 @@ class RequestDocumentController extends Controller
             $query->where('document', $request->input('document'));
         }
 
+        // Sorting
+        $sortBy = $request->query('sort_by', 'created_at'); // default sorting
+        $order = $request->query('order', 'desc');
+
+        // Allowed sortable columns
+        $allowedSorts = ['created_at', 'document'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
+        $query->orderBy($sortBy, $order);
+
+        // Pagination
         $perPage = $request->input('per_page', 10);
         $results = $query->with(['account', 'document', 'uploadedRequirements.requirement'])->paginate($perPage);
 
         return response()->json($results);
     }
+
 
     // 4. Get by id
     public function show($id)
