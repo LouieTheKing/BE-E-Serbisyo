@@ -31,10 +31,12 @@ class CertificateLogsController extends Controller
         }
     }
 
-    // 2. Get all certificate logs with filters and pagination, including date range
+    // 2. Get all certificate logs with filters, pagination, and sorting
     public function index(Request $request)
     {
         $query = CertificateLog::query();
+
+        // Filters
         if ($request->has('document_request')) {
             $query->where('document_request', $request->input('document_request'));
         }
@@ -47,26 +49,38 @@ class CertificateLogsController extends Controller
         if ($request->has(['date_from', 'date_to'])) {
             $query->whereBetween('created_at', [$request->input('date_from'), $request->input('date_to')]);
         }
-        // Filter by requestor (on related request_documents)
         if ($request->has('requestor')) {
             $query->whereHas('documentRequest', function($q) use ($request) {
                 $q->where('requestor', $request->input('requestor'));
             });
         }
-        // Filter by document (on related request_documents)
         if ($request->has('document')) {
             $query->whereHas('documentRequest', function($q) use ($request) {
                 $q->where('document', $request->input('document'));
             });
         }
+
+        // Sorting
+        $sortBy = $request->query('sort_by', 'created_at'); // default
+        $order = $request->query('order', 'desc'); // default
+        $allowedSorts = ['created_at', 'remark'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
+        $query->orderBy($sortBy, $order);
+
+        // Pagination
         $perPage = $request->input('per_page', 10);
         $logs = $query->with([
             'documentRequest.account',
             'documentRequest.document',
             'staffAccount'
         ])->paginate($perPage);
+
         return response()->json($logs);
     }
+
 
     // 3. Get certificate log by id
     public function show($id)
