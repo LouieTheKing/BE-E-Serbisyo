@@ -16,29 +16,39 @@ class ActivityLogsController extends Controller
     {
         $query = ActivityLog::with('account');
 
-        // filters
-        if ($request->has('account') && !empty($request->account)) {
+        // Filters
+        if ($request->filled('account')) {
             $query->where('account', $request->account);
         }
 
-        if ($request->has('module') && !empty($request->module)) {
+        if ($request->filled('module')) {
             $query->where('module', 'like', '%' . $request->module . '%');
         }
 
-        // search (remark, module)
-        if ($request->has('search') && !empty($request->search)) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('remark', 'like', "%{$search}%")
-                  ->orWhere('module', 'like', "%{$search}%");
+                ->orWhere('module', 'like', "%{$search}%");
             });
         }
 
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at'); // default column
+        $sortOrder = $request->get('order', 'desc'); // default order
+
+        $allowedSorts = ['created_at', 'account', 'module', 'remark'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
         $perPage = $request->get('per_page', 10);
-        $logs = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        $logs = $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
 
         return response()->json($logs);
     }
+
 
     /**
      * Store a new activity log
