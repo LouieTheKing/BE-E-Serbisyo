@@ -10,17 +10,30 @@ use Exception;
 
 class DocumentsController extends Controller
 {
-    // 1. List all documents
+    // 1. List all documents with optional sorting
     public function index(Request $request)
     {
         try {
             $query = Document::query();
 
+            // Filter by status
             if ($request->has('status')) {
                 $query->where('status', $request->status);
             }
 
+            // Sorting
+            $sortBy = $request->query('sort_by', 'created_at'); // default sort
+            $order = $request->query('order', 'desc'); // default order
+
+            $allowedSorts = ['document_name', 'status', 'created_at'];
+            if (!in_array($sortBy, $allowedSorts)) {
+                $sortBy = 'created_at';
+            }
+
+            $query->orderBy($sortBy, $order);
+
             $documents = $query->with('requirements')->get();
+
             return response()->json($documents);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
