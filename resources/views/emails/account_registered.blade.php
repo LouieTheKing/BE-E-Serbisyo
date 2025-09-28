@@ -14,7 +14,7 @@
                     <!-- Header -->
                     <tr>
                         <td style="background:#4CAF50; padding:20px; text-align:center; color:#ffffff;">
-                            <h1 style="margin:0; font-size:24px;">Barangay E-Serbisyo</h1>
+                            <h1 style="margin:0; font-size:24px;">E-Serbisyo Barangay Santol Support</h1>
                         </td>
                     </tr>
 
