@@ -2,91 +2,77 @@
 
 namespace App\Http\Controllers\API;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Validator;
 use App\Models\Blotter;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class BlotterController extends Controller
 {
     /**
-     * Display a listing of blotters with pagination and optional filters.
+     * List blotters with filters & pagination
      */
     public function index(Request $request)
-{
-    $perPage = $request->get('per_page', 10);
-    $status = $request->get('status');
-    $reporter = $request->get('reporter');
-    $location = $request->get('location');
-    $incidentDate = $request->get('incident_date'); // single date
-    $fromDate = $request->get('from_date');
-    $toDate = $request->get('to_date');
-    $search = $request->get('search'); // keyword search
+    {
+        $perPage = $request->get('per_page', 10);
+        $status = $request->get('status');
 
-    $query = Blotter::with('account')->latest();
+        $query = Blotter::with('creator')->latest();
 
-    if ($status) {
-        $query->where('status', $status);
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($request->get('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('complainant_name', 'like', "%$search%")
+                  ->orWhere('respondent_name', 'like', "%$search%")
+                  ->orWhere('case_number', 'like', "%search%")
+                  ->orWhere('complaint_details', 'like', "%$search%");
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $query->paginate($perPage)
+        ]);
     }
-
-    if ($reporter) {
-        $query->where('reporter', $reporter);
-    }
-
-    if ($location) {
-        $query->where('location', $location);
-    }
-
-    if ($incidentDate) {
-        $query->whereDate('incident_date', $incidentDate);
-    }
-
-    if ($fromDate && $toDate) {
-        $query->whereBetween('incident_date', [$fromDate, $toDate]);
-    }
-
-    if ($search) {
-        $query->where(function ($q) use ($search) {
-            $q->where('incidents', 'like', '%' . $search . '%')
-              ->orWhere('remarks', 'like', '%' . $search . '%');
-        });
-    }
-
-    $blotters = $query->paginate($perPage);
-
-    return response()->json([
-        'success' => true,
-        'data' => $blotters
-    ], 200);
-}
-
 
     /**
-     * Store a newly created blotter.
+     * Store blotter
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'blotter_number' => 'required|string|unique:blotters,blotter_number',
-            'remarks' => 'required|string',
-            'incidents' => 'required|string',
-            'location' => 'required|string',
-            'incident_date' => 'required|date',
-            'reporter' => 'required|integer|exists:accounts,id',
-            'status' => 'in:pending,resolved,unresolved'
+            'complainant_name' => 'required|string',
+            'respondent_name' => 'required|string',
+            'additional_respondent' => 'nullable|array',
+            'complaint_details' => 'required|string',
+            'relief_sought' => 'required|string',
+            'date_filed' => 'required|date',
+            'status' => 'in:filed,ongoing,settled',
+            'case_type' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $blotter = Blotter::create($request->only([
-            'blotter_number', 'status', 'remarks', 'incidents',
-            'location', 'incident_date', 'reporter'
-        ]));
+        $blotter = Blotter::create([
+            'case_number' => strtoupper('BLT-' . date('Ymd') . '-' . Str::random(5)),
+            'complainant_name' => $request->complainant_name,
+            'respondent_name' => $request->respondent_name,
+            'additional_respondent' => $request->additional_respondent,
+            'complaint_details' => $request->complaint_details,
+            'case_type' => $request->case_type,
+            'relief_sought' => $request->relief_sought,
+            'date_filed' => $request->date_filed,
+            'received_by' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
+            'created_by' => auth()->id(),
+            'status' => $request->status ?? 'filed',
+        ]);
 
         return response()->json([
             'success' => true,
@@ -96,22 +82,20 @@ class BlotterController extends Controller
     }
 
     /**
-     * Show a blotter by id (from request body).
+     * Show blotter by case number
      */
-    public function show(Request $request)
+    public function show($case_number)
     {
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:blotters,id'
-        ]);
+        $blotter = Blotter::with(['createdBy', 'receivedBy'])
+            ->where('case_number', $case_number)
+            ->first();
 
-        if ($validator->fails()) {
+        if (!$blotter) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Blotter not found'
+            ], 404);
         }
-
-        $blotter = Blotter::with('account')->find($request->id);
 
         return response()->json([
             'success' => true,
@@ -119,64 +103,50 @@ class BlotterController extends Controller
         ], 200);
     }
 
+
+
     /**
-     * Update blotter by id (from request body).
+     * Update blotter
      */
-    public function update(Request $request)
+    public function update(Request $request, $case_number)
     {
+        $blotter = Blotter::where('case_number', $case_number)->firstOrFail();
+
         $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:blotters,id',
-            'blotter_number' => 'sometimes|required|string|unique:blotters,blotter_number,' . $request->id,
-            'remarks' => 'sometimes|required|string',
-            'incidents' => 'sometimes|required|string',
-            'location' => 'sometimes|required|string',
-            'incident_date' => 'sometimes|required|date',
-            'reporter' => 'sometimes|required|integer|exists:accounts,id',
-            'status' => 'sometimes|required|in:pending,resolved,unresolved'
+            'complainant_name' => 'sometimes|string',
+            'respondent_name' => 'sometimes|string',
+            'additional_respondent' => 'nullable|array',
+            'complaint_details' => 'sometimes|string',
+            'relief_sought' => 'sometimes|string',
+            'case_type' => 'sometimes|string|max:255',
+            'date_filed' => 'sometimes|date',
+            'status' => 'sometimes|in:filed,ongoing,settled',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $blotter = Blotter::find($request->id);
-        $blotter->update($request->only([
-            'blotter_number', 'status', 'remarks', 'incidents',
-            'location', 'incident_date', 'reporter'
-        ]));
+        $blotter->update($request->all());
 
         return response()->json([
             'success' => true,
             'message' => 'Blotter updated successfully',
             'data' => $blotter
-        ], 200);
+        ]);
     }
 
     /**
-     * Destroy blotter by id (from request body).
+     * Delete blotter
      */
-    public function destroy(Request $request)
+    public function destroy($case_number)
     {
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:blotters,id'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $blotter = Blotter::find($request->id);
+        $blotter = Blotter::where('case_number', $case_number)->firstOrFail();
         $blotter->delete();
 
         return response()->json([
             'success' => true,
             'message' => 'Blotter deleted successfully'
-        ], 200);
+        ]);
     }
 }

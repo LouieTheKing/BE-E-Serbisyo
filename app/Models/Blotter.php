@@ -10,21 +10,35 @@ class Blotter extends Model
     use HasFactory;
 
     protected $fillable = [
-        'blotter_number',
+        'case_number',
+        'complainant_name',
+        'respondent_name',
+        'case_type',
+        'additional_respondent',
+        'complaint_details',
+        'relief_sought',
+        'date_filed',
+        'received_by',
+        'created_by',
         'status',
-        'remarks',
-        'incidents',
-        'location',
-        'incident_date',
-        'reporter'
     ];
 
     protected $casts = [
-        'incident_date' => 'date'
+        'additional_respondent' => 'array',
+        'date_filed' => 'date',
     ];
 
-    public function account()
+    public function creator()
     {
-        return $this->belongsTo(Account::class, 'reporter');
+        return $this->belongsTo(Account::class, 'created_by');
+    }
+    public function createdBy()
+    {
+        return $this->belongsTo(Account::class, 'created_by');
+    }
+
+    public function receivedBy()
+    {
+        return $this->belongsTo(Account::class, 'received_by');
     }
 }

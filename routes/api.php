@@ -67,9 +67,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Blotter Routes
     Route::get('/blotters', [BlotterController::class, 'index']);
     Route::post('/blotters/create', [BlotterController::class, 'store']);
-    Route::post('/blotters/show', [BlotterController::class, 'show']);
-    Route::put('/blotters/update', [BlotterController::class, 'update']);
-    Route::delete('/blotters/delete', [BlotterController::class, 'destroy']);
+    Route::post('/blotters/show/{case_number}', [BlotterController::class, 'show']);
+    Route::put('/blotters/update/{case_number}', [BlotterController::class, 'update']);
+    Route::delete('/blotters/delete/{case_number}', [BlotterController::class, 'destroy']);
 
     // Feedback routes
     Route::get('/feedback', [FeedbackController::class, 'index']);

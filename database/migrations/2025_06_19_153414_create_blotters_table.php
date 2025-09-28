@@ -6,31 +6,31 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('blotters', function (Blueprint $table) {
             $table->id();
-            $table->string('blotter_number')->unique();
-            $table->string('status')->default('pending'); // pending, resolved, unresolved
-            $table->text('remarks');
-            $table->text('incidents');
-            $table->string('location');
-            $table->date('incident_date');
-
-            $table->foreignId('reporter')
-                    ->references('id')
-                    ->on('accounts')
-                    ->onUpdate('cascade');
+            $table->string('case_number')->unique(); // auto-generated case #
+            $table->string('complainant_name');
+            $table->string('respondent_name');
+            $table->string('case_type');
+            $table->json('additional_respondent')->nullable(); // array of names
+            $table->text('complaint_details');
+            $table->text('relief_sought');
+            $table->date('date_filed');
+            $table->string('received_by'); // staff name
+            $table->unsignedBigInteger('created_by'); // user id
+            $table->enum('status', ['filed', 'ongoing', 'settled'])->default('filed');
             $table->timestamps();
+
+            $table->foreign('created_by')
+                ->references('id')
+                ->on('accounts')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('blotters');
