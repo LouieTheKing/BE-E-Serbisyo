@@ -181,4 +181,33 @@ class AccountController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function updateType(Request $request, $id)
+    {
+        try {
+            // ✅ Only admin can update type
+            if (!$request->user() || !in_array($request->user()->type, ['admin', 'staff'])) {
+                return response()->json(['error' => 'Unauthorized. Only admins can update account types.'], 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'type' => 'required|string|in:residence,admin,staff',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()], 422);
+            }
+
+            $account = Account::findOrFail($id);
+            $account->type = $request->type;
+            $account->save();
+
+            return response()->json([
+                'message' => 'Account type updated successfully',
+                'account' => $account
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

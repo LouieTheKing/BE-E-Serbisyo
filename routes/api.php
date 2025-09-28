@@ -20,6 +20,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 // Account Routes
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/admin/add-account', [AuthController::class, 'create_account']);
+    Route::post('/admin/update/user-type/{id}', [AccountController::class, 'updateType']);
     Route::put('/accounts/{id}/update-information', [AccountController::class, 'updateInformation']);
     Route::put('/accounts/{id}/update-status', [AccountController::class, 'updateStatus']);
     Route::put('/accounts/{id}/update-password', [AccountController::class, 'updatePassword']);
