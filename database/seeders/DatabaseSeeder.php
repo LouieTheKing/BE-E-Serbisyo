@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             AccountSeeder::class,
             DocumentSeeder::class,
             AnnouncementSeeder::class,
+            BlotterSeeder::class,
         ]);
     }
 
