@@ -8,24 +8,45 @@ use App\Models\RejectedAccount;
 
 class RejectedAccountController extends Controller
 {
-    // List rejected accounts with pagination and search by name
+    // List rejected accounts with pagination, search, and sorting
     public function index(Request $request)
     {
         $perPage = $request->query('per_page', 10);
         $search = $request->query('search');
 
         $query = RejectedAccount::query();
+
+        // Search by name
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('first_name', 'like', "%$search%")
-                  ->orWhere('last_name', 'like', "%$search%")
-                  ->orWhere('middle_name', 'like', "%$search%")
-                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%$search%"]);
+                ->orWhere('last_name', 'like', "%$search%")
+                ->orWhere('middle_name', 'like', "%$search%")
+                ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%$search%"]);
             });
         }
+
+        // Sorting
+        $sortBy = $request->query('sort_by', 'created_at'); // default sort by date
+        $order = $request->query('order', 'desc'); // default descending
+
+        $allowedSorts = ['first_name', 'last_name', 'created_at']; // allowed columns
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
+        // Sort by full name if requested
+        if ($sortBy === 'first_name' || $sortBy === 'last_name') {
+            $query->orderBy($sortBy, $order);
+        } else {
+            $query->orderBy($sortBy, $order);
+        }
+
         $accounts = $query->paginate($perPage);
+
         return response()->json($accounts);
     }
+
 
     // Create a rejected account with validation and try-catch
     public function store(Request $request)
