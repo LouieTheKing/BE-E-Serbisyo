@@ -118,23 +118,37 @@ class OfficialsController extends Controller
         }
     }
 
-    // 4. Get all officials with status filter
+    // 4. Get all officials with status filter, pagination, and sorting
     public function index(Request $request)
     {
         $status = $request->query('status');
-        $perPage = $request->query('per_page', default: 10);
+        $perPage = $request->query('per_page', 10);
+
+        $sortBy = $request->query('sort_by', 'term_start'); // default sorting
+        $order = $request->query('order', 'asc'); // default ascending
+
+        $allowedSorts = ['full_name', 'position', 'term_start', 'term_end'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'term_start';
+        }
 
         try {
             $query = Official::query();
+
             if ($status) {
                 $query->where('status', $status);
             }
+
+            // If sorting by full name, you can still just use the column
+            $query->orderBy($sortBy, $order);
+
             $officials = $query->paginate($perPage);
             return response()->json($officials, 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch officials', 'message' => $e->getMessage()], 500);
         }
     }
+
 
     // 5. Get official by id
     public function show($id)
