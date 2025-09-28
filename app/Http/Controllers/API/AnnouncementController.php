@@ -11,12 +11,20 @@ use Illuminate\Support\Facades\Storage;
 class AnnouncementController extends Controller
 {
     /**
-     * Display a listing of announcements with pagination and filter.
+     * Display a listing of announcements with pagination, filter, and sorting.
      */
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 10); // default 10
         $type = $request->get('type'); // filter type (optional)
+
+        $sortBy = $request->query('sort_by', 'created_at'); // default sorting
+        $order = $request->query('order', 'desc'); // default descending
+
+        $allowedSorts = ['created_at', 'type', 'description'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
 
         $query = Announcement::query();
 
@@ -24,13 +32,16 @@ class AnnouncementController extends Controller
             $query->where('type', $type);
         }
 
-        $announcements = $query->latest()->paginate($perPage);
+        $query->orderBy($sortBy, $order);
+
+        $announcements = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'data' => $announcements
         ], 200);
     }
+
 
     /**
      * Store a newly created announcement.
