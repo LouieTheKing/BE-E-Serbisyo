@@ -24,4 +24,8 @@ class RequestDocument extends Model
     {
         return $this->belongsTo(Document::class, 'document');
     }
+    public function uploadedRequirements()
+    {
+        return $this->hasMany(UploadedDocumentRequirement::class, 'document', 'document');
+    }
 }

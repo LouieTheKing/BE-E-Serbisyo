@@ -20,7 +20,7 @@ class DocumentsController extends Controller
                 $query->where('status', $request->status);
             }
 
-            $documents = $query->get();
+            $documents = $query->with('requirements')->get();
             return response()->json($documents);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -31,7 +31,7 @@ class DocumentsController extends Controller
     public function show($id)
     {
         try {
-            $document = Document::find($id);
+            $document = Document::with('requirements')->find($id);
             if (!$document) {
                 return response()->json(['error' => 'Document not found'], 404);
             }
@@ -75,24 +75,62 @@ class DocumentsController extends Controller
                 'document_name' => 'sometimes|required|string|unique:documents,document_name,' . $id,
                 'description' => 'sometimes|required|string',
                 'status' => 'sometimes|in:active,inactive',
+                'requirements' => 'sometimes|array',
+                'requirements.*.id' => 'sometimes|exists:document_requirements,id',
+                'requirements.*.name' => 'required_with:requirements|string',
+                'requirements.*.description' => 'required_with:requirements|string',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()], 422);
             }
 
-            $document = Document::find($id);
+            $document = Document::with('requirements')->find($id);
             if (!$document) {
                 return response()->json(['error' => 'Document not found'], 404);
             }
 
+            // Update document info
             $document->update($request->only(['document_name', 'description', 'status']));
 
-            return response()->json(['message' => 'Document updated successfully', 'document' => $document]);
+            // Handle requirements update if provided
+            if ($request->has('requirements')) {
+                $reqIds = [];
+
+                foreach ($request->requirements as $reqData) {
+                    if (isset($reqData['id'])) {
+                        // Update existing requirement
+                        $requirement = $document->requirements()->find($reqData['id']);
+                        if ($requirement) {
+                            $requirement->update([
+                                'name' => $reqData['name'],
+                                'description' => $reqData['description'],
+                            ]);
+                            $reqIds[] = $requirement->id;
+                        }
+                    } else {
+                        // Create new requirement
+                        $newReq = $document->requirements()->create([
+                            'name' => $reqData['name'],
+                            'description' => $reqData['description'],
+                        ]);
+                        $reqIds[] = $newReq->id;
+                    }
+                }
+
+                // Delete requirements not included anymore
+                $document->requirements()->whereNotIn('id', $reqIds)->delete();
+            }
+
+            return response()->json([
+                'message' => 'Document updated successfully',
+                'document' => $document->load('requirements')
+            ]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
 
     // 5. Delete a document
     public function destroy($id)

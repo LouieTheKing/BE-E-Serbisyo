@@ -16,7 +16,7 @@ class AccountSeeder extends Seeder
         // Admin account
         Account::create([
             'email' => 'admin@example.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make('pass123'),
             'status' => 'active',
             'type' => 'admin',
             'first_name' => 'System',
@@ -36,7 +36,7 @@ class AccountSeeder extends Seeder
         // Staff account
         Account::create([
             'email' => 'staff@example.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make('pass123'),
             'status' => 'active',
             'type' => 'staff',
             'first_name' => 'Juan',
@@ -56,7 +56,7 @@ class AccountSeeder extends Seeder
         // Resident account
         Account::create([
             'email' => 'resident@example.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make('pass123'),
             'status' => 'active',
             'type' => 'resident',
             'first_name' => 'Maria',

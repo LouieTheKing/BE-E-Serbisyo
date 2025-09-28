@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\RequestDocument;
 use App\Models\CertificateLog;
+use App\Models\DocumentRequirement;
 
 class Document extends Model
 {
@@ -25,5 +26,10 @@ class Document extends Model
     public function certificateLogs()
     {
         return $this->hasMany(CertificateLog::class, 'document');
+    }
+
+    public function requirements()
+    {
+        return $this->hasMany(DocumentRequirement::class, 'document');
     }
 }
