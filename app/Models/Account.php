@@ -38,6 +38,7 @@ class Account extends Authenticatable
         'pwd_number',
         'single_parent_number',
         'profile_picture_path',
+        'civil_status'
     ];
 
     protected $hidden = [

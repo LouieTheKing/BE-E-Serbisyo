@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('status')->default('pending'); // active, inactive, pending
             $table->string('type')->default('staff'); // admin, staff, residence
+            $table->string('civil_status');
 
             // Personal Information
             $table->string('first_name');

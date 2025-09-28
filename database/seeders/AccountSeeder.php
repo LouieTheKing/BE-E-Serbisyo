@@ -30,7 +30,8 @@ class AccountSeeder extends Seeder
             'house_no' => '123',
             'street' => 'Main Street',
             'zip_code' => '1000',
-            'birth_place' => 'Bulacan'
+            'birth_place' => 'Bulacan',
+            'civil_status' => 'single'
         ]);
 
         // Staff account
@@ -50,7 +51,8 @@ class AccountSeeder extends Seeder
             'house_no' => '456',
             'street' => 'Second Street',
             'zip_code' => '1001',
-            'birth_place' => 'Bulacan'
+            'birth_place' => 'Bulacan',
+            'civil_status' => 'married'
         ]);
 
         // Resident account
@@ -70,7 +72,8 @@ class AccountSeeder extends Seeder
             'house_no' => '789',
             'street' => 'Third Street',
             'zip_code' => '1002',
-            'birth_place' => 'Bulacan'
+            'birth_place' => 'Bulacan',
+            'civil_status' => 'widowed'
         ]);
     }
 }

@@ -36,6 +36,7 @@ class AuthController extends Controller
                 'pwd_number' => 'nullable|string',
                 'single_parent_number' => 'nullable|string',
                 'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+                'civil_status' => 'required|string|in:single,married,widowed,divorced,separated',
             ]);
 
             if ($validator->fails()) {
@@ -72,6 +73,7 @@ class AuthController extends Controller
                 'pwd_number' => $request->pwd_number ?? null,
                 'single_parent_number' => $request->single_parent_number ?? null,
                 'profile_picture_path' => $profilePicturePath,
+                'civil_status' => $request->civil_status
             ]);
             Mail::to($account->email)->send(new AccountRegisteredMail($account));
 
@@ -145,6 +147,7 @@ class AuthController extends Controller
                 'pwd_number' => 'nullable|string',
                 'single_parent_number' => 'nullable|string',
                 'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+                'civil_status' => 'required|string|in:single,married,widowed,divorced,separated',
             ]);
 
             if (!$request->user() || !in_array($request->user()->type, ['admin', 'staff'])) {
@@ -184,6 +187,7 @@ class AuthController extends Controller
                 'pwd_number' => $request->pwd_number ?? null,
                 'single_parent_number' => $request->single_parent_number ?? null,
                 'profile_picture_path' => $profilePicturePath,
+                'civil_status' => $request->civil_status
             ]);
             Mail::to($account->email)->send(new AccountRegisteredMail($account));
 
