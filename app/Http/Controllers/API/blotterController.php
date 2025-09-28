@@ -17,8 +17,10 @@ class BlotterController extends Controller
     {
         $perPage = $request->get('per_page', 10);
         $status = $request->get('status');
+        $sortBy = $request->get('sort_by', 'created_at'); // column to sort
+        $sortOrder = $request->get('order', 'desc'); // asc or desc
 
-        $query = Blotter::with('creator')->latest();
+        $query = Blotter::with('creator');
 
         if ($status) {
             $query->where('status', $status);
@@ -28,17 +30,26 @@ class BlotterController extends Controller
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('complainant_name', 'like', "%$search%")
-                  ->orWhere('respondent_name', 'like', "%$search%")
-                  ->orWhere('case_number', 'like', "%search%")
-                  ->orWhere('complaint_details', 'like', "%$search%");
+                ->orWhere('respondent_name', 'like', "%$search%")
+                ->orWhere('case_number', 'like', "%$search%")
+                ->orWhere('complaint_details', 'like', "%$search%");
             });
         }
+
+        // Apply sorting safely
+        $allowedSorts = ['case_number', 'date_filed', 'status', 'created_at'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
+        $query->orderBy($sortBy, $sortOrder);
 
         return response()->json([
             'success' => true,
             'data' => $query->paginate($perPage)
         ]);
     }
+
 
     /**
      * Store blotter
