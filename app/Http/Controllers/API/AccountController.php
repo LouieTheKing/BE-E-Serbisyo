@@ -116,22 +116,43 @@ class AccountController extends Controller
         return response()->json($user);
     }
 
-    // 6. Get all accounts with pagination and filter for type and status
+    // 6. Get all accounts with pagination, filter, and sorting
     public function index(Request $request)
     {
         $perPage = $request->query('per_page', 10);
         $query = Account::query();
 
+        // Filter by type
         if ($request->has('type')) {
             $query->where('type', $request->query('type'));
         }
+
+        // Filter by status
         if ($request->has('status')) {
             $query->where('status', $request->query('status'));
+        }
+
+        // Sorting
+        $sortBy = $request->query('sort_by', 'created_at'); // default sort by date
+        $order = $request->query('order', 'desc'); // default descending
+
+        // Validate allowed columns
+        $allowedSorts = ['name', 'created_at'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
+        // If sorting by name, use last_name + first_name
+        if ($sortBy === 'name') {
+            $query->orderBy('last_name', $order)->orderBy('first_name', $order);
+        } else {
+            $query->orderBy($sortBy, $order);
         }
 
         $accounts = $query->paginate($perPage);
         return response()->json($accounts);
     }
+
 
     // 7. Reject (delete) account
     public function rejectAccount(Request $request, $id)
