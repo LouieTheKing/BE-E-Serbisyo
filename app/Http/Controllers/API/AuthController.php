@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Exception;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AccountRegisteredMail;
 
 class AuthController extends Controller
 {
@@ -71,8 +73,12 @@ class AuthController extends Controller
                 'single_parent_number' => $request->single_parent_number ?? null,
                 'profile_picture_path' => $profilePicturePath,
             ]);
+            Mail::to($account->email)->send(new AccountRegisteredMail($account));
 
-            return response()->json(['message' => 'Registration successful', 'account' => $account], 201);
+            return response()->json([
+                'message' => 'Registration successful',
+                'account' => $account
+            ], 201);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

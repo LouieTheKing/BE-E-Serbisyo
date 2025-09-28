@@ -11,6 +11,11 @@ class Announcement extends Model
 
     protected $fillable = [
         'type',
-        'description'
+        'description',
+        'images'
+    ];
+
+    protected $casts = [
+        'images' => 'array',
     ];
 }

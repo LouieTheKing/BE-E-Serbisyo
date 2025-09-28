@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('type'); // information, problem, warning
             $table->text('description');
+            $table->json('images')->nullable(); // store array of image paths/URLs
             $table->timestamps();
         });
     }
