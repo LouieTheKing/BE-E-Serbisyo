@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Document;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 use Exception;
 
 class DocumentsController extends Controller
@@ -88,6 +89,7 @@ class DocumentsController extends Controller
                 'document_name' => 'sometimes|required|string|unique:documents,document_name,' . $id,
                 'description' => 'sometimes|required|string',
                 'status' => 'sometimes|in:active,inactive',
+                'template_path' => 'sometimes|nullable|string',
                 'requirements' => 'sometimes|array',
                 'requirements.*.id' => 'sometimes|exists:document_requirements,id',
                 'requirements.*.name' => 'required_with:requirements|string',
@@ -104,7 +106,7 @@ class DocumentsController extends Controller
             }
 
             // Update document info
-            $document->update($request->only(['document_name', 'description', 'status']));
+            $document->update($request->only(['document_name', 'description', 'status', 'template_path']));
 
             // Handle requirements update if provided
             if ($request->has('requirements')) {
@@ -153,8 +155,109 @@ class DocumentsController extends Controller
             if (!$document) {
                 return response()->json(['error' => 'Document not found'], 404);
             }
+
+            // Delete the template file if it exists
+            if ($document->template_path && Storage::disk('public')->exists($document->template_path)) {
+                Storage::disk('public')->delete($document->template_path);
+            }
+
             $document->delete();
             return response()->json(['message' => 'Document deleted successfully']);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // 6. Upload PDF template for a document
+    public function uploadTemplate(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'template' => 'required|file|mimes:pdf|max:10240', // Max 10MB
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()], 422);
+            }
+
+            $document = Document::find($id);
+            if (!$document) {
+                return response()->json(['error' => 'Document not found'], 404);
+            }
+
+            // Delete old template if exists
+            if ($document->template_path && Storage::disk('public')->exists($document->template_path)) {
+                Storage::disk('public')->delete($document->template_path);
+            }
+
+            // Store the new template
+            $file = $request->file('template');
+            $filename = 'document_templates/' . $document->id . '_' . time() . '.pdf';
+            $path = $file->storeAs('document_templates', $document->id . '_' . time() . '.pdf', 'public');
+
+            // Update the document with the template path
+            $document->update(['template_path' => $path]);
+
+            return response()->json([
+                'message' => 'Template uploaded successfully',
+                'template_path' => $path,
+                'document' => $document
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // 7. Retrieve PDF template for a document
+    public function getTemplate($id)
+    {
+        try {
+            $document = Document::find($id);
+            if (!$document) {
+                return response()->json(['error' => 'Document not found'], 404);
+            }
+
+            if (!$document->template_path) {
+                return response()->json(['error' => 'No template found for this document'], 404);
+            }
+
+            if (!Storage::disk('public')->exists($document->template_path)) {
+                return response()->json(['error' => 'Template file not found'], 404);
+            }
+
+            $filePath = Storage::disk('public')->path($document->template_path);
+            $fileName = $document->document_name . '_template.pdf';
+
+            return response()->download($filePath, $fileName, [
+                'Content-Type' => 'application/pdf',
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // 8. Delete PDF template for a document
+    public function deleteTemplate($id)
+    {
+        try {
+            $document = Document::find($id);
+            if (!$document) {
+                return response()->json(['error' => 'Document not found'], 404);
+            }
+
+            if (!$document->template_path) {
+                return response()->json(['error' => 'No template found for this document'], 404);
+            }
+
+            // Delete the template file
+            if (Storage::disk('public')->exists($document->template_path)) {
+                Storage::disk('public')->delete($document->template_path);
+            }
+
+            // Update the document to remove template path
+            $document->update(['template_path' => null]);
+
+            return response()->json(['message' => 'Template deleted successfully']);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

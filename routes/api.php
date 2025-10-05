@@ -39,6 +39,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/documents/update/{id}', [DocumentsController::class, 'update']);
     Route::delete('/documents/destroy/{id}', [DocumentsController::class, 'destroy']);
 
+    // Document Template Routes
+    Route::post('/documents/{id}/template/upload', [DocumentsController::class, 'uploadTemplate']);
+    Route::get('/documents/{id}/template/get', [DocumentsController::class, 'getTemplate']);
+    Route::delete('/documents/{id}/template/delete', [DocumentsController::class, 'deleteTemplate']);
+
     // Request Document Routes
     Route::get('/request-documents', [RequestDocumentController::class, 'index']);
     Route::get('/request-documents/{id}', [RequestDocumentController::class, 'show']);
