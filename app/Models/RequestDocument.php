@@ -10,20 +10,24 @@ class RequestDocument extends Model
     use HasFactory;
 
     protected $fillable = [
+        'transaction_id',
         'requestor',
         'document',
         'status'
     ];
+
+    protected $with = ['documentDetails', 'account'];
 
     public function account()
     {
         return $this->belongsTo(Account::class, 'requestor');
     }
 
-    public function document()
+    public function documentDetails()
     {
         return $this->belongsTo(Document::class, 'document');
     }
+
     public function uploadedRequirements()
     {
         return $this->hasMany(UploadedDocumentRequirement::class, 'document', 'document');

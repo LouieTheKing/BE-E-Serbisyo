@@ -8,6 +8,8 @@ use App\Models\RequestDocument;
 use App\Models\UploadedDocumentRequirement;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\RequestDocumentStatusMail;
 
 class RequestDocumentController extends Controller
 {
@@ -25,8 +27,14 @@ class RequestDocumentController extends Controller
             // ✅ requestor is the logged-in user
             $requestorId = auth()->id();
 
+            // Generate unique transaction ID
+            do {
+                $transactionId = 'TXN_DOC_' . str_pad(random_int(0, 9999999), 7, '0', STR_PAD_LEFT);
+            } while (RequestDocument::where('transaction_id', $transactionId)->exists());
+
             // Step 1: Create the request document
             $requestDocument = RequestDocument::create([
+                'transaction_id' => $transactionId,
                 'requestor' => $requestorId,
                 'document' => $validated['document'],
                 'status' => 'pending',
@@ -52,8 +60,17 @@ class RequestDocumentController extends Controller
                 }
             }
 
+            // Load relationships for email
+            $requestDocument->load(['account', 'documentDetails']);
+
+            // Send email notification to the requestor
+            if ($requestDocument->account && $requestDocument->account->email) {
+                Mail::to($requestDocument->account->email)
+                    ->send(new RequestDocumentStatusMail($requestDocument));
+            }
+
             return response()->json([
-                'message' => 'Request created successfully',
+                'message' => 'Request created successfully and email sent',
                 'request_document' => $requestDocument,
                 'uploaded_requirements' => $uploads,
             ], 201);
@@ -71,15 +88,24 @@ class RequestDocumentController extends Controller
             $validated = $request->validate([
                 'status' => [
                     'required',
-                    Rule::in(['pending', 'released', 'rejected'])
+                    Rule::in(['pending', 'released', 'rejected', 'approved', 'processing', 'ready to pickup'])
                 ]
             ]);
 
-            $requestDocument = RequestDocument::findOrFail($id);
+            $requestDocument = RequestDocument::with(['account', 'documentDetails'])->findOrFail($id);
             $requestDocument->status = $validated['status'];
             $requestDocument->save();
 
-            return response()->json($requestDocument);
+            // Send email notification to the requestor
+            if ($requestDocument->account && $requestDocument->account->email) {
+                Mail::to($requestDocument->account->email)
+                    ->send(new RequestDocumentStatusMail($requestDocument));
+            }
+
+            return response()->json([
+                'message' => 'Status updated and email sent successfully',
+                'request_document' => $requestDocument
+            ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
@@ -115,7 +141,7 @@ class RequestDocumentController extends Controller
 
         // Pagination
         $perPage = $request->input('per_page', 10);
-        $results = $query->with(['account', 'document', 'uploadedRequirements.requirement'])->paginate($perPage);
+        $results = $query->with(['account', 'documentDetails', 'uploadedRequirements.requirement'])->paginate($perPage);
 
         return response()->json($results);
     }
@@ -124,7 +150,7 @@ class RequestDocumentController extends Controller
     // 4. Get by id
     public function show($id)
     {
-        $requestDocument = RequestDocument::with(['account', 'document', 'uploadedRequirements.requirement'])->findOrFail($id);
+        $requestDocument = RequestDocument::with(['account', 'documentDetails', 'uploadedRequirements.requirement'])->findOrFail($id);
         return response()->json($requestDocument);
     }
 
