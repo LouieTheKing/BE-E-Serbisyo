@@ -8,6 +8,9 @@ use App\Models\Account;
 use App\Models\RejectedAccount;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AccountAcceptedMail;
+use App\Mail\AccountRejectedMail;
 use Exception;
 
 class AccountController extends Controller
@@ -170,7 +173,11 @@ class AccountController extends Controller
             }
 
             $rejectedData['reason'] = $request->input('reason');
-            RejectedAccount::create($rejectedData);
+            $rejectedAccount = RejectedAccount::create($rejectedData);
+
+            // Send rejection email
+            Mail::to($account->email)->send(new AccountRejectedMail($rejectedAccount));
+
             $account->delete();
             return response()->json(['message' => 'Account rejected and deleted successfully']);
         } catch (Exception $e) {
@@ -178,6 +185,21 @@ class AccountController extends Controller
         }
     }
 
+    public function acceptAccount(Request $request, $id)
+    {
+        try {
+            $account = Account::findOrFail($id);
+            $account->status = 'active';
+            $account->save();
+
+            // Send acceptance email
+            Mail::to($account->email)->send(new AccountAcceptedMail($account));
+
+            return response()->json(['message' => 'Account has been accepted', 'account' => $account]);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
     // 8. Update profile picture
     public function updateProfilePicture(Request $request, $id)
     {

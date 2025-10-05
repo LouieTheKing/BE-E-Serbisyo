@@ -26,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/accounts/{id}/update-status', [AccountController::class, 'updateStatus']);
     Route::put('/accounts/{id}/update-password', [AccountController::class, 'updatePassword']);
     Route::post('/accounts/{id}/update-profile-picture', [AccountController::class, 'updateProfilePicture']);
+    Route::put('/accounts/{id}/accept', [AccountController::class, 'acceptAccount']);
     Route::delete('/accounts/{id}/reject', [AccountController::class, 'rejectAccount']);
     Route::get('/accounts/all', [AccountController::class, 'index']);
     Route::get('/user', [AccountController::class, 'current']);

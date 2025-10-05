@@ -103,6 +103,11 @@ class AuthController extends Controller
                 return response()->json(['error' => 'Invalid credentials'], 401);
             }
 
+            if($account->status !== "active")
+                return response()->json([
+                    'error' => 'You are not allowed to login. Your account account status is ' . $account->status . '.'
+                ], 401);
+
             // Generate Sanctum token
             $token = $account->createToken('auth_token')->plainTextToken;
             return response()->json([
