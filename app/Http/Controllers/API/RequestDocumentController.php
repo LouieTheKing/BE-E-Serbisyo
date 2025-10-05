@@ -154,6 +154,59 @@ class RequestDocumentController extends Controller
         return response()->json($requestDocument);
     }
 
+    // 5. Track document by transaction ID
+    public function trackByTransactionId($transactionId)
+    {
+        try {
+            $requestDocument = RequestDocument::where('transaction_id', $transactionId)
+                ->with(['account', 'documentDetails', 'uploadedRequirements.requirement'])
+                ->first();
+
+            if (!$requestDocument) {
+                return response()->json([
+                    'message' => 'Document not found',
+                    'error' => 'No document found with the provided transaction ID'
+                ], 404);
+            }
+
+            // Format the response with tracking information
+            return response()->json([
+                'transaction_id' => $requestDocument->transaction_id,
+                'request_id' => $requestDocument->id,
+                'status' => $requestDocument->status,
+                'document_type' => $requestDocument->documentDetails->document_name ?? 'N/A',
+                'requestor' => [
+                    'name' => ($requestDocument->account->first_name ?? '') . ' ' . ($requestDocument->account->last_name ?? ''),
+                    'email' => $requestDocument->account->email ?? 'N/A',
+                ],
+                'request_date' => $requestDocument->created_at->format('F d, Y h:i A'),
+                'last_updated' => $requestDocument->updated_at->format('F d, Y h:i A'),
+                'uploaded_requirements' => $requestDocument->uploadedRequirements->map(function ($upload) {
+                    return [
+                        'requirement_name' => $upload->requirement->requirement_name ?? 'N/A',
+                        'file_url' => Storage::url($upload->file_path),
+                        'uploaded_at' => $upload->created_at->format('F d, Y h:i A'),
+                    ];
+                }),
+                'status_timeline' => [
+                    'pending' => $requestDocument->status === 'pending',
+                    'approved' => in_array($requestDocument->status, ['approved', 'processing', 'ready to pickup', 'released']),
+                    'processing' => in_array($requestDocument->status, ['processing', 'ready to pickup', 'released']),
+                    'ready_to_pickup' => in_array($requestDocument->status, ['ready to pickup', 'released']),
+                    'released' => $requestDocument->status === 'released',
+                    'rejected' => $requestDocument->status === 'rejected',
+                ],
+                'full_details' => $requestDocument,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error tracking document',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function uploadRequirement(Request $request, $requestDocumentId)
     {
         try {
