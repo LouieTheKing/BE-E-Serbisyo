@@ -12,6 +12,7 @@ use App\Http\Controllers\API\AnnouncementController;
 use App\Http\Controllers\API\BlotterController;
 use App\Http\Controllers\API\FeedbackController;
 use App\Http\Controllers\API\activityLogsController;
+use App\Http\Controllers\API\DashboardController;
 
 // Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -91,6 +92,30 @@ Route::middleware('auth:sanctum')->group(function () {
     // Activity Logs Routes
     Route::get('/activitylogs', [activityLogsController::class, 'index']);
     Route::post('/activitylogs/create', [activityLogsController::class, 'store']);
+
+    // Dashboard Routes
+    Route::prefix('dashboard')->group(function () {
+        // Overview
+        Route::get('/overview', [DashboardController::class, 'overview']);
+        Route::get('/all-statistics', [DashboardController::class, 'allStatistics']);
+
+        // Module-specific statistics
+        Route::get('/document-requests', [DashboardController::class, 'documentRequests']);
+        Route::get('/users', [DashboardController::class, 'userStatistics']);
+        Route::get('/blotters', [DashboardController::class, 'blotterStatistics']);
+        Route::get('/feedbacks', [DashboardController::class, 'feedbackStatistics']);
+        Route::get('/certificates', [DashboardController::class, 'certificateStatistics']);
+        Route::get('/activity_logs', [DashboardController::class, 'activityStatistics']);
+        Route::get('/announcements', [DashboardController::class, 'announcementStatistics']);
+
+        // Document analytics
+        Route::get('/document-types', [DashboardController::class, 'documentTypeStatistics']);
+        Route::get('/top-documents', [DashboardController::class, 'topDocuments']);
+
+        // Performance metrics
+        Route::get('/performance', [DashboardController::class, 'performanceMetrics']);
+        Route::get('/monthly-comparison', [DashboardController::class, 'monthlyComparison']);
+    });
 });
 
 // Temporary bug fix sa Route [Login]

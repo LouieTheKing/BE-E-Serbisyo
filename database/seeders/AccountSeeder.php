@@ -57,10 +57,10 @@ class AccountSeeder extends Seeder
 
         // Resident account
         Account::create([
-            'email' => 'resident@example.com',
+            'email' => 'residence@example.com',
             'password' => Hash::make('pass123'),
             'status' => 'active',
-            'type' => 'resident',
+            'type' => 'residence',
             'first_name' => 'Maria',
             'last_name' => 'Santos',
             'sex' => 'Female',
