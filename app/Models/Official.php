@@ -10,7 +10,7 @@ class Official extends Model
     use HasFactory;
 
     protected $fillable = [
-        'full_name',
+        'account_id',
         'position',
         'image_path',
         'term_start',
@@ -22,4 +22,9 @@ class Official extends Model
         'term_start' => 'date',
         'term_end' => 'date'
     ];
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class, 'account_id');
+    }
 }

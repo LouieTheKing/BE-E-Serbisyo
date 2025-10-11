@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('officials', function (Blueprint $table) {
             $table->id();
-            $table->string('full_name');
+            $table->foreignId('account_id')
+                ->constrained('accounts')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
             $table->string('position');
             $table->text('image_path');
             $table->date('term_start');

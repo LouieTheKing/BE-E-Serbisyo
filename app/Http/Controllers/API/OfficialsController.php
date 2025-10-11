@@ -5,9 +5,13 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Official;
+use App\Models\Account;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AccountRegisteredMail;
 
 class OfficialsController extends Controller
 {
@@ -15,12 +19,29 @@ class OfficialsController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'full_name' => 'required|string|max:255',
             'position' => 'required|string|max:255',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             'term_start' => 'required|date',
             'term_end' => 'required|date|after_or_equal:term_start',
             'status' => 'required|in:active,inactive',
+            // Account fields
+            'email' => 'required|email|unique:accounts,email',
+            'first_name' => 'required|string',
+            'middle_name' => 'nullable|string',
+            'last_name' => 'required|string',
+            'suffix' => 'nullable|string',
+            'sex' => 'required|string',
+            'nationality' => 'nullable|string',
+            'birthday' => 'required|date',
+            'contact_no' => 'required|string',
+            'birth_place' => 'required|string',
+            'municipality' => 'required|string',
+            'barangay' => 'required|string',
+            'house_no' => 'required|string',
+            'zip_code' => 'required|string',
+            'street' => 'required|string',
+            'civil_status' => 'required|string|in:single,married,widowed,divorced,separated',
+            'type' => 'required|string|in:staff,admin',
         ]);
 
         if ($validator->fails()) {
@@ -29,25 +50,61 @@ class OfficialsController extends Controller
 
         DB::beginTransaction();
         try {
+            // Create account for the official first
+            $account = Account::create([
+                'email' => $request->email,
+                'password' => Hash::make($request->email), // Default password is the email
+                'first_name' => $request->first_name,
+                'middle_name' => $request->middle_name,
+                'last_name' => $request->last_name,
+                'suffix' => $request->suffix,
+                'sex' => $request->sex,
+                'nationality' => $request->nationality ?? 'Filipino',
+                'birthday' => $request->birthday,
+                'contact_no' => $request->contact_no,
+                'birth_place' => $request->birth_place,
+                'municipality' => $request->municipality,
+                'barangay' => $request->barangay,
+                'house_no' => $request->house_no,
+                'zip_code' => $request->zip_code,
+                'street' => $request->street,
+                'civil_status' => $request->civil_status,
+                'type' => $request->type,
+                'status' => 'active', // Account is active immediately
+            ]);
+
+            // Upload official image
             $imagePath = null;
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
                 $imagePath = $image->store('officials', 'public');
             }
 
+            // Create official record
             $official = Official::create([
-                'full_name' => $request->full_name,
+                'account_id' => $account->id,
                 'position' => $request->position,
                 'image_path' => $imagePath,
                 'term_start' => $request->term_start,
                 'term_end' => $request->term_end,
                 'status' => $request->status,
             ]);
+
+            // Send email notification
+            Mail::to($account->email)->send(new AccountRegisteredMail($account));
+
             DB::commit();
-            return response()->json(['official' => $official], 201);
+
+            return response()->json([
+                'message' => 'Official and account created successfully. Email sent.',
+                'official' => $official->load('account')
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Failed to create official', 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Failed to create official and account',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -55,7 +112,6 @@ class OfficialsController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'full_name' => 'sometimes|required|string|max:255',
             'position' => 'sometimes|required|string|max:255',
             'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
             'term_start' => 'sometimes|required|date',
@@ -82,14 +138,13 @@ class OfficialsController extends Controller
                 $image = $request->file('image');
                 $official->image_path = $image->store('officials', 'public');
             }
-            if ($request->has('full_name')) $official->full_name = $request->full_name;
             if ($request->has('position')) $official->position = $request->position;
             if ($request->has('term_start')) $official->term_start = $request->term_start;
             if ($request->has('term_end')) $official->term_end = $request->term_end;
             if ($request->has('status')) $official->status = $request->status;
             $official->save();
             DB::commit();
-            return response()->json(['official' => $official], 200);
+            return response()->json(['official' => $official->load('account')], 200);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Failed to update official', 'message' => $e->getMessage()], 500);
@@ -112,7 +167,7 @@ class OfficialsController extends Controller
         try {
             $official->status = $request->status;
             $official->save();
-            return response()->json(['official' => $official], 200);
+            return response()->json(['official' => $official->load('account')], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to update status', 'message' => $e->getMessage()], 500);
         }
@@ -127,19 +182,18 @@ class OfficialsController extends Controller
         $sortBy = $request->query('sort_by', 'term_start'); // default sorting
         $order = $request->query('order', 'asc'); // default ascending
 
-        $allowedSorts = ['full_name', 'position', 'term_start', 'term_end'];
+        $allowedSorts = ['position', 'term_start', 'term_end'];
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'term_start';
         }
 
         try {
-            $query = Official::query();
+            $query = Official::with('account');
 
             if ($status) {
                 $query->where('status', $status);
             }
 
-            // If sorting by full name, you can still just use the column
             $query->orderBy($sortBy, $order);
 
             $officials = $query->paginate($perPage);
@@ -154,7 +208,7 @@ class OfficialsController extends Controller
     public function show($id)
     {
         try {
-            $official = Official::find($id);
+            $official = Official::with('account')->find($id);
             if (!$official) {
                 return response()->json(['error' => 'Official not found'], 404);
             }

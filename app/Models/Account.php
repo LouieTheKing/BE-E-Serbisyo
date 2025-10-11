@@ -79,4 +79,9 @@ class Account extends Authenticatable
     {
         return $this->hasOne(AccountProof::class, 'account_id');
     }
+
+    public function official()
+    {
+        return $this->hasOne(Official::class, 'account_id');
+    }
 }
