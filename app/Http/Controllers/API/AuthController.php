@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Account;
+use App\Models\AccountProof;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -36,6 +37,9 @@ class AuthController extends Controller
                 'single_parent_number' => 'nullable|string',
                 'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
                 'civil_status' => 'required|string|in:single,married,widowed,divorced,separated',
+                'back_id_card' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+                'front_id_card' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+                'selfie_id_card' => 'required|image|mimes:jpeg,jpg,png|max:2048',
             ]);
 
             if ($validator->fails()) {
@@ -74,7 +78,46 @@ class AuthController extends Controller
                 'profile_picture_path' => $profilePicturePath,
                 'civil_status' => $request->civil_status
             ]);
+
+            // Handle account proof files
+            $backIdCardPath = null;
+            if ($request->hasFile('back_id_card')) {
+                $file = $request->file('back_id_card');
+                $filename = 'back_id_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('account_proofs', $filename, 'public');
+                $backIdCardPath = '/storage/' . $path;
+            }
+
+            $frontIdCardPath = null;
+            if ($request->hasFile('front_id_card')) {
+                $file = $request->file('front_id_card');
+                $filename = 'front_id_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('account_proofs', $filename, 'public');
+                $frontIdCardPath = '/storage/' . $path;
+            }
+
+            $selfieIdCardPath = null;
+            if ($request->hasFile('selfie_id_card')) {
+                $file = $request->file('selfie_id_card');
+                $filename = 'selfie_id_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('account_proofs', $filename, 'public');
+                $selfieIdCardPath = '/storage/' . $path;
+            }
+
+            // Create account proof record
+            if ($backIdCardPath || $frontIdCardPath || $selfieIdCardPath) {
+                AccountProof::create([
+                    'account_id' => $account->id,
+                    'back_id_card' => $backIdCardPath,
+                    'front_id_card' => $frontIdCardPath,
+                    'selfie_id_card' => $selfieIdCardPath,
+                ]);
+            }
+
             Mail::to($account->email)->send(new AccountRegisteredMail($account));
+
+            // Reload account with proofs
+            $account->load('accountProof');
 
             return response()->json([
                 'message' => 'Registration successful',
@@ -107,6 +150,9 @@ class AuthController extends Controller
                 return response()->json([
                     'error' => 'You are not allowed to login. Your account account status is ' . $account->status . '.'
                 ], 401);
+
+            // Load account proofs
+            $account->load('accountProof');
 
             // Generate Sanctum token
             $token = $account->createToken('auth_token')->plainTextToken;

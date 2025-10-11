@@ -106,13 +106,14 @@ class AccountController extends Controller
     // 4. Get current authenticated user
     public function current(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user()->load('accountProof');
+        return response()->json($user);
     }
 
     // 5. Get user by id
     public function show($id)
     {
-        $user = Account::find($id);
+        $user = Account::with('accountProof')->find($id);
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
@@ -123,7 +124,7 @@ class AccountController extends Controller
     public function index(Request $request)
     {
         $perPage = $request->query('per_page', 10);
-        $query = Account::query();
+        $query = Account::query()->with('accountProof');
 
         // Filter by type
         if ($request->has('type')) {
@@ -188,7 +189,7 @@ class AccountController extends Controller
     public function acceptAccount(Request $request, $id)
     {
         try {
-            $account = Account::findOrFail($id);
+            $account = Account::with('accountProof')->findOrFail($id);
             $account->status = 'active';
             $account->save();
 

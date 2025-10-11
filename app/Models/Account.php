@@ -74,4 +74,9 @@ class Account extends Authenticatable
     {
         return $this->hasMany(ActivityLog::class, 'account');
     }
+
+    public function accountProof()
+    {
+        return $this->hasOne(AccountProof::class, 'account_id');
+    }
 }
