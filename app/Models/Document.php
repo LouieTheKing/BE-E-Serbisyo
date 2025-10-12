@@ -16,7 +16,13 @@ class Document extends Model
         'document_name',
         'description',
         'status',
-        'template_path'
+        'template_path',
+        'template_fields',
+        'html_template'
+    ];
+
+    protected $casts = [
+        'template_fields' => 'array',
     ];
 
     public function requestDocuments()

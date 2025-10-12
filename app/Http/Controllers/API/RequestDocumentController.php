@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\RequestDocumentStatusMail;
+use App\Services\PdfGeneratorService;
 
 class RequestDocumentController extends Controller
 {
@@ -18,12 +19,37 @@ class RequestDocumentController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'document' => 'required|exists:documents,id',
-                'requirements' => 'sometimes|array',
-                'requirements.*.requirement_id' => 'required|exists:document_requirements,id',
-                'requirements.*.file' => 'required|file|mimes:pdf|max:5120',
-            ]);
+            // Handle case where information is sent as a JSON string (e.g., in multipart/form-data)
+            if ($request->has('information') && is_string($request->information)) {
+                $data = $request->all();
+
+                $decoded = json_decode($data['information'], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $data['information'] = $decoded;
+                } else {
+                    return response()->json([
+                        'error' => 'Invalid JSON format for information field',
+                        'received' => $data['information'],
+                    ], 400);
+                }
+
+                $validated = validator($data, [
+                    'document' => 'required|exists:documents,id',
+                    'information' => 'sometimes|array',
+                    'requirements' => 'sometimes|array',
+                    'requirements.*.requirement_id' => 'required|exists:document_requirements,id',
+                    'requirements.*.file' => 'required|file|mimes:pdf|max:5120',
+                ])->validate();
+            } else {
+                // Normal JSON request
+                $validated = $request->validate([
+                    'document' => 'required|exists:documents,id',
+                    'information' => 'sometimes|array',
+                    'requirements' => 'sometimes|array',
+                    'requirements.*.requirement_id' => 'required|exists:document_requirements,id',
+                    'requirements.*.file' => 'required|file|mimes:pdf|max:5120',
+                ]);
+            }
 
             // ✅ requestor is the logged-in user
             $requestorId = auth()->id();
@@ -39,6 +65,7 @@ class RequestDocumentController extends Controller
                 'requestor' => $requestorId,
                 'document' => $validated['document'],
                 'status' => 'pending',
+                'information' => $validated['information'] ?? null,
             ]);
 
             $uploads = [];
@@ -280,6 +307,53 @@ class RequestDocumentController extends Controller
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
+        }
+    }
+
+    /**
+     * Generate filled PDF document from template
+     */
+    public function generateFilledDocument(Request $request, $id)
+    {
+        try {
+            $requestDocument = RequestDocument::with(['documentDetails'])->findOrFail($id);
+
+            // Check if information is provided
+            if (empty($requestDocument->information)) {
+                return response()->json([
+                    'error' => 'No information data available for this request'
+                ], 400);
+            }
+
+            $pdfGenerator = new PdfGeneratorService();
+
+            // Validate required fields
+            $missingFields = $pdfGenerator->validateRequiredFields(
+                $requestDocument->documentDetails,
+                $requestDocument->information
+            );
+
+            if (!empty($missingFields)) {
+                return response()->json([
+                    'error' => 'Missing required fields',
+                    'missing_fields' => $missingFields
+                ], 400);
+            }
+
+            // Generate filled document
+            $filledDocumentPath = $pdfGenerator->generateFilledDocument($requestDocument);
+
+            return response()->json([
+                'message' => 'Document generated successfully',
+                'file_path' => $filledDocumentPath,
+                'file_url' => Storage::url($filledDocumentPath)
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to generate document',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

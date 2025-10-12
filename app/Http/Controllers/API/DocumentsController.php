@@ -8,6 +8,7 @@ use App\Models\Document;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Exception;
+use App\Services\PdfGeneratorService;
 
 class DocumentsController extends Controller
 {
@@ -90,6 +91,11 @@ class DocumentsController extends Controller
                 'description' => 'sometimes|required|string',
                 'status' => 'sometimes|in:active,inactive',
                 'template_path' => 'sometimes|nullable|string',
+                'template_fields' => 'sometimes|nullable|array',
+                'template_fields.*.name' => 'required_with:template_fields|string',
+                'template_fields.*.label' => 'required_with:template_fields|string',
+                'template_fields.*.type' => 'required_with:template_fields|in:text,number,date,textarea,email',
+                'template_fields.*.required' => 'sometimes|boolean',
                 'requirements' => 'sometimes|array',
                 'requirements.*.id' => 'sometimes|exists:document_requirements,id',
                 'requirements.*.name' => 'required_with:requirements|string',
@@ -106,7 +112,7 @@ class DocumentsController extends Controller
             }
 
             // Update document info
-            $document->update($request->only(['document_name', 'description', 'status', 'template_path']));
+            $document->update($request->only(['document_name', 'description', 'status', 'template_path', 'template_fields']));
 
             // Handle requirements update if provided
             if ($request->has('requirements')) {
@@ -168,12 +174,12 @@ class DocumentsController extends Controller
         }
     }
 
-    // 6. Upload PDF template for a document
+    // 6. Upload template for a document (PDF, DOCX, or HTML)
     public function uploadTemplate(Request $request, $id)
     {
         try {
             $validator = Validator::make($request->all(), [
-                'template' => 'required|file|mimes:pdf|max:10240', // Max 10MB
+                'template' => 'required|file|mimes:pdf,docx,doc,html|max:10240', // Max 10MB
             ]);
 
             if ($validator->fails()) {
@@ -192,17 +198,36 @@ class DocumentsController extends Controller
 
             // Store the new template
             $file = $request->file('template');
-            $filename = 'document_templates/' . $document->id . '_' . time() . '.pdf';
-            $path = $file->storeAs('document_templates', $document->id . '_' . time() . '.pdf', 'public');
+            $extension = $file->getClientOriginalExtension();
+            $filename = $document->id . '_' . time() . '.' . $extension;
+            $path = $file->storeAs('document_templates', $filename, 'public');
 
             // Update the document with the template path
             $document->update(['template_path' => $path]);
 
-            return response()->json([
-                'message' => 'Template uploaded successfully',
-                'template_path' => $path,
-                'document' => $document
-            ]);
+            // Auto-extract placeholders
+            try {
+                $pdfGenerator = new PdfGeneratorService();
+                $placeholders = $pdfGenerator->extractPlaceholdersFromTemplate($path);
+
+                return response()->json([
+                    'message' => 'Template uploaded successfully',
+                    'template_path' => $path,
+                    'template_type' => $extension,
+                    'placeholders_found' => $placeholders,
+                    'placeholders_count' => count($placeholders),
+                    'document' => $document
+                ]);
+            } catch (\Exception $e) {
+                // If extraction fails, still return success for upload
+                return response()->json([
+                    'message' => 'Template uploaded successfully',
+                    'template_path' => $path,
+                    'template_type' => $extension,
+                    'document' => $document,
+                    'note' => 'Could not auto-extract placeholders: ' . $e->getMessage()
+                ]);
+            }
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -260,6 +285,47 @@ class DocumentsController extends Controller
             return response()->json(['message' => 'Template deleted successfully']);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // 9. Extract placeholders from uploaded template
+    public function extractPlaceholders($id)
+    {
+        try {
+            $document = Document::find($id);
+            if (!$document) {
+                return response()->json(['error' => 'Document not found'], 404);
+            }
+
+            if (!$document->template_path) {
+                return response()->json(['error' => 'No template found for this document'], 404);
+            }
+
+            $pdfGenerator = new PdfGeneratorService();
+            $placeholders = $pdfGenerator->extractPlaceholdersFromTemplate($document->template_path);
+
+            $filePath = Storage::disk('public')->path($document->template_path);
+            $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+            return response()->json([
+                'message' => 'Placeholders extracted successfully',
+                'template_path' => $document->template_path,
+                'template_type' => $extension,
+                'placeholders' => $placeholders,
+                'count' => count($placeholders),
+                'debug_info' => [
+                    'file_exists' => Storage::disk('public')->exists($document->template_path),
+                    'file_path' => $filePath,
+                    'file_size' => file_exists($filePath) ? filesize($filePath) : 0,
+                    'extension' => $extension
+                ]
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Failed to extract placeholders',
+                'message' => $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : 'Enable debug mode for trace'
+            ], 500);
         }
     }
 }

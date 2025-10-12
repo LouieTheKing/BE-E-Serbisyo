@@ -13,10 +13,15 @@ class RequestDocument extends Model
         'transaction_id',
         'requestor',
         'document',
-        'status'
+        'status',
+        'information'
     ];
 
     protected $with = ['documentDetails', 'account'];
+
+    protected $casts = [
+        'information' => 'array',
+    ];
 
     public function account()
     {

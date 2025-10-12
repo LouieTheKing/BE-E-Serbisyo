@@ -47,12 +47,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/documents/{id}/template/upload', [DocumentsController::class, 'uploadTemplate']);
     Route::get('/documents/{id}/template/get', [DocumentsController::class, 'getTemplate']);
     Route::delete('/documents/{id}/template/delete', [DocumentsController::class, 'deleteTemplate']);
+    Route::get('/documents/{id}/template/extract-placeholders', [DocumentsController::class, 'extractPlaceholders']);
 
     // Request Document Routes
     Route::get('/request-documents', [RequestDocumentController::class, 'index']);
     Route::get('/request-documents/{id}', [RequestDocumentController::class, 'show']);
     Route::post('/request-documents/create', [RequestDocumentController::class, 'store']);
     Route::put('/request-documents/status/{id}', [RequestDocumentController::class, 'changeStatus']);
+    Route::post('/request-documents/{id}/generate-filled-document', [RequestDocumentController::class, 'generateFilledDocument']);
 
     // Certificate Logs Routes
     Route::get('/certificate-logs', [CertificateLogsController::class, 'index']);
