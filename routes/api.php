@@ -21,6 +21,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 // Public tracking route - no authentication required
 Route::get('/track-document/{transaction_id}', [RequestDocumentController::class, 'trackByTransactionId']);
+Route::get('/announcements', [AnnouncementController::class, 'index']);
+Route::post('/announcements/show', [AnnouncementController::class, 'show']);
+Route::get('/officials/get', [\App\Http\Controllers\API\OfficialsController::class, 'index']);
+Route::get('/officials/get/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'show']);
 
 // Account Routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -64,16 +68,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/officials/create', [\App\Http\Controllers\API\OfficialsController::class, 'store']);
     Route::post('/officials/update/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'update']);
     Route::post('/officials/update/status/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'updateStatus']);
-    Route::get('/officials/get', [\App\Http\Controllers\API\OfficialsController::class, 'index']);
-    Route::get('/officials/get/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'show']);
 
     // Rejected Accounts Routes
     Route::get('/rejected-accounts', [RejectedAccountController::class, 'index']);
 
     // Announcement Routes
-    Route::get('/announcements', [AnnouncementController::class, 'index']);       // paginated + filter
     Route::post('/announcements/create', [AnnouncementController::class, 'store']);
-    Route::post('/announcements/show', [AnnouncementController::class, 'show']);
     Route::put('/announcements/update', [AnnouncementController::class, 'update']);
     Route::delete('/announcements/delete', [AnnouncementController::class, 'destroy']);
 
