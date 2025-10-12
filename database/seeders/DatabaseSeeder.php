@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             DocumentSeeder::class,
             AnnouncementSeeder::class,
             BlotterSeeder::class,
+            ConfigSeeder::class,
         ]);
     }
 

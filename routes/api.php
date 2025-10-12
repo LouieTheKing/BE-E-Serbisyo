@@ -25,6 +25,7 @@ Route::get('/announcements', [AnnouncementController::class, 'index']);
 Route::post('/announcements/show', [AnnouncementController::class, 'show']);
 Route::get('/officials/get', [\App\Http\Controllers\API\OfficialsController::class, 'index']);
 Route::get('/officials/get/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'show']);
+Route::get('/configs', [\App\Http\Controllers\API\ConfigController::class, 'index']);
 
 // Account Routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -93,6 +94,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Activity Logs Routes
     Route::get('/activitylogs', [activityLogsController::class, 'index']);
     Route::post('/activitylogs/create', [activityLogsController::class, 'store']);
+
+    // Config Routes
+    Route::post('/configs/create', [\App\Http\Controllers\API\ConfigController::class, 'store']);
+    Route::put('/configs/update', [\App\Http\Controllers\API\ConfigController::class, 'update']);
+    Route::delete('/configs/delete', [\App\Http\Controllers\API\ConfigController::class, 'destroy']);
 
     // Dashboard Routes
     Route::prefix('dashboard')->group(function () {
