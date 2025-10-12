@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\RequestDocument;
 use App\Models\UploadedDocumentRequirement;
+use App\Models\CertificateLog;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
@@ -63,6 +64,13 @@ class RequestDocumentController extends Controller
             // Load relationships for email
             $requestDocument->load(['account', 'documentDetails']);
 
+            // Create initial certificate log
+            CertificateLog::create([
+                'document_request' => $requestDocument->id,
+                'staff' => null, // No staff involved in initial request
+                'remark' => 'Document request created by requestor'
+            ]);
+
             // Send email notification to the requestor
             if ($requestDocument->account && $requestDocument->account->email) {
                 Mail::to($requestDocument->account->email)
@@ -89,12 +97,34 @@ class RequestDocumentController extends Controller
                 'status' => [
                     'required',
                     Rule::in(['pending', 'released', 'rejected', 'approved', 'processing', 'ready to pickup'])
-                ]
+                ],
+                'remark' => 'nullable|string'
             ]);
 
             $requestDocument = RequestDocument::with(['account', 'documentDetails'])->findOrFail($id);
             $requestDocument->status = $validated['status'];
             $requestDocument->save();
+
+            // Automatically create certificate log
+            $staffId = auth()->check() ? auth()->id() : null;
+
+            // Default remarks based on status if no remark is provided
+            $defaultRemarks = [
+                'pending' => 'Document request status changed to pending',
+                'approved' => 'Document request has been approved',
+                'processing' => 'Document is currently being processed',
+                'ready to pickup' => 'Document is ready for pickup',
+                'released' => 'Document has been released to requestor',
+                'rejected' => 'Document request has been rejected'
+            ];
+
+            $remark = $validated['remark'] ?? $defaultRemarks[$validated['status']] ?? 'Status updated to ' . $validated['status'];
+
+            CertificateLog::create([
+                'document_request' => $requestDocument->id,
+                'staff' => $staffId,
+                'remark' => $remark
+            ]);
 
             // Send email notification to the requestor
             if ($requestDocument->account && $requestDocument->account->email) {
@@ -169,6 +199,12 @@ class RequestDocumentController extends Controller
                 ], 404);
             }
 
+            // Get certificate logs for this request
+            $certificateLogs = CertificateLog::where('document_request', $requestDocument->id)
+                ->with(['staffAccount'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
             // Format the response with tracking information
             return response()->json([
                 'transaction_id' => $requestDocument->transaction_id,
@@ -181,6 +217,15 @@ class RequestDocumentController extends Controller
                 ],
                 'request_date' => $requestDocument->created_at->format('F d, Y h:i A'),
                 'last_updated' => $requestDocument->updated_at->format('F d, Y h:i A'),
+                'certificate_logs' => $certificateLogs->map(function($log) {
+                    return [
+                        'id' => $log->id,
+                        'remark' => $log->remark,
+                        'staff_name' => ($log->staffAccount->first_name ?? '') . ' ' . ($log->staffAccount->last_name ?? ''),
+                        'staff_email' => $log->staffAccount->email ?? 'N/A',
+                        'logged_at' => $log->created_at->format('F d, Y h:i A'),
+                    ];
+                }),
                 'uploaded_requirements' => $requestDocument->uploadedRequirements->map(function ($upload) {
                     return [
                         'requirement_name' => $upload->requirement->requirement_name ?? 'N/A',

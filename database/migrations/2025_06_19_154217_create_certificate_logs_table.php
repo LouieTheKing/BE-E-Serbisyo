@@ -20,11 +20,12 @@ return new class extends Migration
                     ->onUpdate('cascade');
 
             $table->foreignId('staff')
+                    ->nullable()
                     ->references('id')
                     ->on('accounts')
                     ->onUpdate('cascade');
 
-            $table->string('remark');
+            $table->string('remark')->nullable();
             $table->timestamps();
         });
     }

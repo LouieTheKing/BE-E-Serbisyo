@@ -55,7 +55,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/request-documents/status/{id}', [RequestDocumentController::class, 'changeStatus']);
 
     // Certificate Logs Routes
-    Route::post('/certificate-logs/create', [CertificateLogsController::class, 'create']);
     Route::get('/certificate-logs', [CertificateLogsController::class, 'index']);
     Route::get('/certificate-logs/{id}', [CertificateLogsController::class, 'show']);
 
