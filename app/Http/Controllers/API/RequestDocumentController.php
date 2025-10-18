@@ -324,18 +324,38 @@ class RequestDocumentController extends Controller
     }
 
     /**
-     * Generate filled PDF document from template
+     * Generate filled PDF document from template (with caching)
      */
     public function generateFilledDocument(Request $request, $id)
     {
         try {
             $requestDocument = RequestDocument::with(['documentDetails'])->findOrFail($id);
+            $forceRegenerate = $request->input('force_regenerate', false);
+
+            // Check if document is already generated and file still exists
+            if (!$forceRegenerate &&
+                $requestDocument->generated_document_path &&
+                Storage::disk('public')->exists($requestDocument->generated_document_path)) {
+
+                // Return cached document
+                return response()->json([
+                    'message' => 'Document retrieved from cache',
+                    'file_path' => $requestDocument->generated_document_path,
+                    'file_url' => Storage::url($requestDocument->generated_document_path),
+                    'cached' => true
+                ]);
+            }
 
             // Check if information is provided
             if (empty($requestDocument->information)) {
                 return response()->json([
                     'error' => 'No information data available for this request'
                 ], 400);
+            }
+
+            // If forcing regeneration, delete old file
+            if ($forceRegenerate && $requestDocument->generated_document_path) {
+                Storage::disk('public')->delete($requestDocument->generated_document_path);
             }
 
             $pdfGenerator = new PdfGeneratorService();
@@ -353,8 +373,11 @@ class RequestDocumentController extends Controller
                 ], 400);
             }
 
-            // Generate filled document
+            // Generate new document
             $filledDocumentPath = $pdfGenerator->generateFilledDocument($requestDocument);
+
+            // Cache the file path in database
+            $requestDocument->update(['generated_document_path' => $filledDocumentPath]);
 
             // Log the activity
             $this->logActivity('Document Processing', "Generated filled document for transaction: {$requestDocument->transaction_id}");
@@ -362,7 +385,8 @@ class RequestDocumentController extends Controller
             return response()->json([
                 'message' => 'Document generated successfully',
                 'file_path' => $filledDocumentPath,
-                'file_url' => Storage::url($filledDocumentPath)
+                'file_url' => Storage::url($filledDocumentPath),
+                'cached' => false
             ]);
 
         } catch (\Exception $e) {

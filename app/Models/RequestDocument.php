@@ -14,7 +14,8 @@ class RequestDocument extends Model
         'requestor',
         'document',
         'status',
-        'information'
+        'information',
+        'generated_document_path'
     ];
 
     protected $with = ['documentDetails', 'account'];
