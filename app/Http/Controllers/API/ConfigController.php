@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Config;
 use Illuminate\Support\Facades\Validator;
+use App\Traits\LogsActivity;
 
 class ConfigController extends Controller
 {
+    use LogsActivity;
     /**
      * Get all configurations
      */
@@ -75,6 +77,9 @@ class ConfigController extends Controller
 
             $config = Config::setValue($request->name, $request->value);
 
+            // Log the activity
+            $this->logActivity('Configuration Management', "Created/updated configuration: {$request->name}");
+
             return response()->json([
                 'success' => true,
                 'message' => 'Configuration saved successfully',
@@ -108,7 +113,11 @@ class ConfigController extends Controller
             }
 
             $config = Config::findOrFail($request->id);
+            $oldName = $config->name;
             $config->update($request->only(['name', 'value']));
+
+            // Log the activity
+            $this->logActivity('Configuration Management', "Updated configuration: {$oldName} → {$config->name}");
 
             return response()->json([
                 'success' => true,
@@ -141,6 +150,10 @@ class ConfigController extends Controller
             }
 
             $config = Config::findOrFail($request->id);
+
+            // Log the activity before deletion
+            $this->logActivity('Configuration Management', "Deleted configuration: {$config->name}");
+
             $config->delete();
 
             return response()->json([

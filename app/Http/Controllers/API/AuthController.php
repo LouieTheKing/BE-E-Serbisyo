@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\Validator;
 use Exception;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\AccountRegisteredMail;
+use App\Traits\LogsActivity;
 
 class AuthController extends Controller
 {
+    use LogsActivity;
     // 1. Register
     public function register(Request $request)
     {
@@ -119,6 +121,10 @@ class AuthController extends Controller
             // Reload account with proofs
             $account->load('accountProof');
 
+            // Log the registration activity (set user temporarily for logging)
+            auth()->setUser($account);
+            $this->logActivity('Authentication', "New user registered: {$account->first_name} {$account->last_name} ({$account->email})");
+
             return response()->json([
                 'message' => 'Registration successful',
                 'account' => $account
@@ -156,6 +162,11 @@ class AuthController extends Controller
 
             // Generate Sanctum token
             $token = $account->createToken('auth_token')->plainTextToken;
+
+            // Set user for authentication and log the activity
+            auth()->setUser($account);
+            $this->logActivity('Authentication', 'User logged in successfully');
+
             return response()->json([
                 'message' => 'Login successful',
                 'token' => $token,
@@ -170,6 +181,9 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
+            // Log before logout
+            $this->logActivity('Authentication', 'User logged out');
+
             $request->user()->currentAccessToken()->delete();
             return response()->json(['message' => 'Logout successful']);
         } catch (Exception $e) {
@@ -240,6 +254,9 @@ class AuthController extends Controller
                 'civil_status' => $request->civil_status
             ]);
             Mail::to($account->email)->send(new AccountRegisteredMail($account));
+
+            // Log the activity
+            $this->logActivity('Account Management', "Created new {$account->type} account for: {$account->first_name} {$account->last_name} ({$account->email})");
 
             return response()->json([
                 'message' => 'Registration successful',

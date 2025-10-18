@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\AccountAcceptedMail;
 use App\Mail\AccountRejectedMail;
 use Exception;
+use App\Traits\LogsActivity;
 
 class AccountController extends Controller
 {
+    use LogsActivity;
     // 1. Update Informations with type
     public function updateInformation(Request $request, $id)
     {
@@ -46,6 +48,9 @@ class AccountController extends Controller
                 'municipality', 'barangay', 'house_no', 'zip_code', 'street', 'type', 'pwd_number', 'single_parent_number'
             ]));
 
+            // Log the activity
+            $this->logActivity('Account Management', "Updated profile information for user: {$account->first_name} {$account->last_name} ({$account->email})");
+
             return response()->json(['message' => 'Account information updated successfully', 'account' => $account]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -65,8 +70,12 @@ class AccountController extends Controller
             }
 
             $account = Account::findOrFail($id);
+            $oldStatus = $account->status;
             $account->status = $request->status;
             $account->save();
+
+            // Log the activity
+            $this->logActivity('Account Management', "Changed account status from '{$oldStatus}' to '{$request->status}' for user: {$account->first_name} {$account->last_name} ({$account->email})");
 
             return response()->json(['message' => 'Account status updated successfully', 'account' => $account]);
         } catch (Exception $e) {
@@ -96,6 +105,9 @@ class AccountController extends Controller
 
             $account->password = Hash::make($request->password);
             $account->save();
+
+            // Log the activity
+            $this->logActivity('Account Management', "Password updated for user: {$account->first_name} {$account->last_name} ({$account->email})");
 
             return response()->json(['message' => 'Password updated successfully']);
         } catch (Exception $e) {
@@ -179,6 +191,9 @@ class AccountController extends Controller
             // Send rejection email
             Mail::to($account->email)->send(new AccountRejectedMail($rejectedAccount));
 
+            // Log the activity
+            $this->logActivity('Account Management', "Rejected and deleted account for user: {$rejectedData['email']} - Reason: {$rejectedData['reason']}");
+
             $account->delete();
             return response()->json(['message' => 'Account rejected and deleted successfully']);
         } catch (Exception $e) {
@@ -195,6 +210,9 @@ class AccountController extends Controller
 
             // Send acceptance email
             Mail::to($account->email)->send(new AccountAcceptedMail($account));
+
+            // Log the activity
+            $this->logActivity('Account Management', "Accepted account for user: {$account->first_name} {$account->last_name} ({$account->email})");
 
             return response()->json(['message' => 'Account has been accepted', 'account' => $account]);
         } catch (Exception $e) {
@@ -220,6 +238,9 @@ class AccountController extends Controller
             $account->profile_picture_path = '/storage/' . $path;
             $account->save();
 
+            // Log the activity
+            $this->logActivity('Account Management', "Updated profile picture for user: {$account->first_name} {$account->last_name} ({$account->email})");
+
             return response()->json(['message' => 'Profile picture updated successfully', 'profile_picture_path' => $account->profile_picture_path]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -243,8 +264,12 @@ class AccountController extends Controller
             }
 
             $account = Account::findOrFail($id);
+            $oldType = $account->type;
             $account->type = $request->type;
             $account->save();
+
+            // Log the activity
+            $this->logActivity('Account Management', "Changed account type from '{$oldType}' to '{$request->type}' for user: {$account->first_name} {$account->last_name} ({$account->email})");
 
             return response()->json([
                 'message' => 'Account type updated successfully',

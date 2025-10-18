@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Feedback;
 use Illuminate\Support\Facades\Validator;
+use App\Traits\LogsActivity;
 
 class FeedbackController extends Controller
 {
+    use LogsActivity;
     /**
      * Display a listing of feedbacks with pagination, filters, and sorting.
      */
@@ -76,6 +78,9 @@ class FeedbackController extends Controller
 
         $feedback = Feedback::create($request->all());
 
+        // Log the activity
+        $this->logActivity('Feedback Management', "Created new feedback (ID: {$feedback->id}) - Category: {$feedback->category}, Rating: {$feedback->rating}/5");
+
         return response()->json([
             'success' => true,
             'data' => $feedback
@@ -104,6 +109,9 @@ class FeedbackController extends Controller
         $feedback = Feedback::find($request->id);
         $feedback->update($request->only(['remarks', 'category', 'rating']));
 
+        // Log the activity
+        $this->logActivity('Feedback Management', "Updated feedback (ID: {$feedback->id})");
+
         return response()->json([
             'success' => true,
             'data' => $feedback
@@ -127,6 +135,10 @@ class FeedbackController extends Controller
         }
 
         $feedback = Feedback::find($request->id);
+
+        // Log the activity before deletion
+        $this->logActivity('Feedback Management', "Deleted feedback (ID: {$feedback->id})");
+
         $feedback->delete();
 
         return response()->json([

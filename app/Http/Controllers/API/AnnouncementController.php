@@ -7,9 +7,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Announcement;
 use Illuminate\Support\Facades\Storage;
+use App\Traits\LogsActivity;
 
 class AnnouncementController extends Controller
 {
+    use LogsActivity;
     /**
      * Display a listing of announcements with pagination, filter, and sorting.
      */
@@ -75,6 +77,9 @@ class AnnouncementController extends Controller
             'description' => $request->description,
             'images' => $imagePaths,
         ]);
+
+        // Log the activity
+        $this->logActivity('Announcement Management', "Created new {$request->type} announcement (ID: {$announcement->id})");
 
         return response()->json([
             'success' => true,
@@ -153,6 +158,9 @@ class AnnouncementController extends Controller
             'images' => $newImages,
         ]);
 
+        // Log the activity
+        $this->logActivity('Announcement Management', "Updated announcement (ID: {$announcement->id})");
+
         return response()->json([
             'success' => true,
             'message' => 'Announcement updated successfully',
@@ -181,6 +189,10 @@ class AnnouncementController extends Controller
         }
 
         $announcement = Announcement::find($request->id);
+
+        // Log the activity before deletion
+        $this->logActivity('Announcement Management', "Deleted announcement (ID: {$announcement->id})");
+
         $announcement->delete();
 
         return response()->json([

@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\RequestDocumentStatusMail;
 use App\Services\PdfGeneratorService;
+use App\Traits\LogsActivity;
 
 class RequestDocumentController extends Controller
 {
+    use LogsActivity;
     // 1. Create a new request document
     public function store(Request $request)
     {
@@ -89,7 +91,7 @@ class RequestDocumentController extends Controller
                 }
             }
 
-            // Load relationships for email 
+            // Load relationships for email
             $requestDocument->load(['account', 'documentDetails']);
 
             // Create initial certificate log
@@ -104,6 +106,9 @@ class RequestDocumentController extends Controller
                 Mail::to($requestDocument->account->email)
                     ->send(new RequestDocumentStatusMail($requestDocument));
             }
+
+            // Log the activity
+            $this->logActivity('Document Requests', "Created new document request with transaction ID: {$transactionId}");
 
             return response()->json([
                 'message' => 'Request created successfully and email sent',
@@ -130,6 +135,7 @@ class RequestDocumentController extends Controller
             ]);
 
             $requestDocument = RequestDocument::with(['account', 'documentDetails'])->findOrFail($id);
+            $oldStatus = $requestDocument->status;
             $requestDocument->status = $validated['status'];
             $requestDocument->save();
 
@@ -159,6 +165,9 @@ class RequestDocumentController extends Controller
                 Mail::to($requestDocument->account->email)
                     ->send(new RequestDocumentStatusMail($requestDocument));
             }
+
+            // Log the activity
+            $this->logActivity('Document Requests', "Changed request status from '{$oldStatus}' to '{$validated['status']}' for transaction ID: {$requestDocument->transaction_id}");
 
             return response()->json([
                 'message' => 'Status updated and email sent successfully',
@@ -301,6 +310,9 @@ class RequestDocumentController extends Controller
                 'file_path' => $path,
             ]);
 
+            // Log the activity
+            $this->logActivity('Document Requirements', "Uploaded requirement file for transaction: {$requestDocument->transaction_id}");
+
             return response()->json([
                 'message' => 'Requirement uploaded successfully',
                 'upload' => $upload,
@@ -343,6 +355,9 @@ class RequestDocumentController extends Controller
 
             // Generate filled document
             $filledDocumentPath = $pdfGenerator->generateFilledDocument($requestDocument);
+
+            // Log the activity
+            $this->logActivity('Document Processing', "Generated filled document for transaction: {$requestDocument->transaction_id}");
 
             return response()->json([
                 'message' => 'Document generated successfully',

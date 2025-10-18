@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\AccountRegisteredMail;
+use App\Traits\LogsActivity;
 
 class OfficialsController extends Controller
 {
+    use LogsActivity;
     // 1. Create Official
     public function store(Request $request)
     {
@@ -93,6 +95,9 @@ class OfficialsController extends Controller
             // Send email notification
             Mail::to($account->email)->send(new AccountRegisteredMail($account));
 
+            // Log the activity
+            $this->logActivity('Officials Management', "Created new official: {$account->first_name} {$account->last_name} - Position: {$request->position}");
+
             DB::commit();
 
             return response()->json([
@@ -143,6 +148,10 @@ class OfficialsController extends Controller
             if ($request->has('term_end')) $official->term_end = $request->term_end;
             if ($request->has('status')) $official->status = $request->status;
             $official->save();
+
+            // Log the activity
+            $this->logActivity('Officials Management', "Updated official: {$official->account->first_name} {$official->account->last_name} - Position: {$official->position}");
+
             DB::commit();
             return response()->json(['official' => $official->load('account')], 200);
         } catch (\Exception $e) {
@@ -165,8 +174,13 @@ class OfficialsController extends Controller
             return response()->json(['error' => 'Official not found'], 404);
         }
         try {
+            $oldStatus = $official->status;
             $official->status = $request->status;
             $official->save();
+
+            // Log the activity
+            $this->logActivity('Officials Management', "Changed status from '{$oldStatus}' to '{$request->status}' for official: {$official->account->first_name} {$official->account->last_name}");
+
             return response()->json(['official' => $official->load('account')], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to update status', 'message' => $e->getMessage()], 500);

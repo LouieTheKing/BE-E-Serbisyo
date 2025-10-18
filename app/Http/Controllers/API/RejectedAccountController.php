@@ -5,9 +5,11 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\RejectedAccount;
+use App\Traits\LogsActivity;
 
 class RejectedAccountController extends Controller
 {
+    use LogsActivity;
     // List rejected accounts with pagination, search, and sorting
     public function index(Request $request)
     {
@@ -77,6 +79,10 @@ class RejectedAccountController extends Controller
                 'reason' => 'nullable|string',
             ]);
             $rejected = RejectedAccount::create($validated);
+
+            // Log the activity
+            $this->logActivity('Account Management', "Manually created rejected account record for: {$validated['email']}");
+
             return response()->json(['message' => 'Rejected account created successfully', 'rejected_account' => $rejected], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

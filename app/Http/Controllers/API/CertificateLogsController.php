@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\CertificateLog;
 use Illuminate\Support\Facades\Validator;
 use Exception;
+use App\Traits\LogsActivity;
 
 class CertificateLogsController extends Controller
 {
+    use LogsActivity;
     // 1. Create a certificate log
     public function create(Request $request)
     {
@@ -25,6 +27,10 @@ class CertificateLogsController extends Controller
             }
 
             $log = CertificateLog::create($validator->validated());
+
+            // Log the activity
+            $this->logActivity('Certificate Logs', "Created certificate log for document request ID: {$request->document_request}");
+
             return response()->json($log, 201);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

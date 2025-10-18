@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Exception;
 use App\Services\PdfGeneratorService;
+use App\Traits\LogsActivity;
 
 class DocumentsController extends Controller
 {
+    use LogsActivity;
     // 1. List all documents with optional sorting
     public function index(Request $request)
     {
@@ -76,6 +78,9 @@ class DocumentsController extends Controller
                 'status' => $request->status ?? 'active',
             ]);
 
+            // Log the activity
+            $this->logActivity('Document Management', "Created new document: {$document->document_name} (ID: {$document->id})");
+
             return response()->json(['message' => 'Document created successfully', 'document' => $document], 201);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -128,6 +133,9 @@ class DocumentsController extends Controller
                 }
             }
 
+            // Log the activity
+            $this->logActivity('Document Management', "Updated document: {$document->document_name} (ID: {$document->id})");
+
             return response()->json([
                 'message' => 'Document updated successfully',
                 'document' => $document->fresh()->load('requirements')
@@ -151,6 +159,9 @@ class DocumentsController extends Controller
             if ($document->template_path && Storage::disk('public')->exists($document->template_path)) {
                 Storage::disk('public')->delete($document->template_path);
             }
+
+            // Log the activity before deletion
+            $this->logActivity('Document Management', "Deleted document: {$document->document_name} (ID: {$document->id})");
 
             $document->delete();
             return response()->json(['message' => 'Document deleted successfully']);
@@ -189,6 +200,9 @@ class DocumentsController extends Controller
 
             // Update the document with the template path
             $document->update(['template_path' => $path]);
+
+            // Log the activity
+            $this->logActivity('Document Management', "Uploaded template for document: {$document->document_name} (ID: {$document->id})");
 
             // Auto-extract placeholders
             try {
@@ -266,6 +280,9 @@ class DocumentsController extends Controller
 
             // Update the document to remove template path
             $document->update(['template_path' => null]);
+
+            // Log the activity
+            $this->logActivity('Document Management', "Deleted template for document: {$document->document_name} (ID: {$document->id})");
 
             return response()->json(['message' => 'Template deleted successfully']);
         } catch (Exception $e) {

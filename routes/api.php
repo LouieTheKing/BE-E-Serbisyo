@@ -94,7 +94,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Activity Logs Routes
     Route::get('/activitylogs', [activityLogsController::class, 'index']);
-    Route::post('/activitylogs/create', [activityLogsController::class, 'store']);
+    Route::get('/activitylogs/{id}', [activityLogsController::class, 'show']);
+    Route::delete('/activitylogs/{id}', [activityLogsController::class, 'destroy']);
 
     // Config Routes
     Route::post('/configs/create', [\App\Http\Controllers\API\ConfigController::class, 'store']);

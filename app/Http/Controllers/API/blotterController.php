@@ -7,9 +7,11 @@ use App\Models\Blotter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Traits\LogsActivity;
 
 class BlotterController extends Controller
 {
+    use LogsActivity;
     /**
      * List blotters with filters & pagination
      */
@@ -71,8 +73,10 @@ class BlotterController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
+        $caseNumber = strtoupper('BLT-' . date('Ymd') . '-' . Str::random(5));
+
         $blotter = Blotter::create([
-            'case_number' => strtoupper('BLT-' . date('Ymd') . '-' . Str::random(5)),
+            'case_number' => $caseNumber,
             'complainant_name' => $request->complainant_name,
             'respondent_name' => $request->respondent_name,
             'additional_respondent' => $request->additional_respondent,
@@ -84,6 +88,9 @@ class BlotterController extends Controller
             'created_by' => auth()->id(),
             'status' => $request->status ?? 'filed',
         ]);
+
+        // Log the activity
+        $this->logActivity('Blotter Management', "Created new blotter case: {$caseNumber}");
 
         return response()->json([
             'success' => true,
@@ -140,6 +147,9 @@ class BlotterController extends Controller
 
         $blotter->update($request->all());
 
+        // Log the activity
+        $this->logActivity('Blotter Management', "Updated blotter case: {$blotter->case_number}");
+
         return response()->json([
             'success' => true,
             'message' => 'Blotter updated successfully',
@@ -153,6 +163,10 @@ class BlotterController extends Controller
     public function destroy($case_number)
     {
         $blotter = Blotter::where('case_number', $case_number)->firstOrFail();
+
+        // Log the activity before deletion
+        $this->logActivity('Blotter Management', "Deleted blotter case: {$blotter->case_number}");
+
         $blotter->delete();
 
         return response()->json([
