@@ -37,4 +37,9 @@ class RequestDocument extends Model
     {
         return $this->hasMany(UploadedDocumentRequirement::class, 'document', 'document');
     }
+
+    public function certificateLogs()
+    {
+        return $this->hasMany(CertificateLog::class, 'document_request');
+    }
 }

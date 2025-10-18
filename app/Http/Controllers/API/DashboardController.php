@@ -467,6 +467,11 @@ class DashboardController extends Controller
                 ->count() / $totalRequests) * 100, 2) : 0,
         ];
 
+        // Add detailed processing breakdown if requested
+        if ($request->input('detailed', false)) {
+            $metrics['detailed_processing'] = $this->calculateDetailedProcessingTime($dateFrom, $dateTo);
+        }
+
         return response()->json([
             'success' => true,
             'data' => $metrics,
@@ -478,26 +483,179 @@ class DashboardController extends Controller
     }
 
     /**
-     * Calculate average processing time in days
+     * Calculate average processing time in days using certificate logs
      */
     private function calculateAverageProcessingTime($dateFrom, $dateTo)
     {
-        $releasedDocuments = RequestDocument::where('status', 'released')
+        // Get completed requests with their certificate logs
+        $completedRequests = RequestDocument::where('status', 'released')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->with(['certificateLogs' => function($query) {
+                $query->orderBy('created_at');
+            }])
             ->get();
 
-        if ($releasedDocuments->isEmpty()) {
+        if ($completedRequests->isEmpty()) {
             return 0;
         }
 
         $totalDays = 0;
-        foreach ($releasedDocuments as $doc) {
-            $createdAt = Carbon::parse($doc->created_at);
-            $updatedAt = Carbon::parse($doc->updated_at);
-            $totalDays += $createdAt->diffInDays($updatedAt);
+        $validRequests = 0;
+
+        foreach ($completedRequests as $request) {
+            $logs = $request->certificateLogs;
+
+            if ($logs->isEmpty()) {
+                // Fallback to original method if no logs
+                $createdAt = Carbon::parse($request->created_at);
+                $updatedAt = Carbon::parse($request->updated_at);
+                $totalDays += $createdAt->diffInDays($updatedAt);
+                $validRequests++;
+                continue;
+            }
+
+            // Use the first log (request created/approved) and last log (released)
+            $firstLog = $logs->first();
+            $lastLog = $logs->last();
+
+            // Use the actual log timestamps for more accurate calculation
+            $startDate = Carbon::parse($firstLog->created_at);
+            $endDate = Carbon::parse($lastLog->created_at);
+
+            $processingDays = $startDate->diffInDays($endDate);
+            $totalDays += $processingDays;
+            $validRequests++;
         }
 
-        return round($totalDays / $releasedDocuments->count(), 2);
+        return $validRequests > 0 ? round($totalDays / $validRequests, 2) : 0;
+    }
+
+    /**
+     * Calculate detailed processing time breakdown using certificate logs
+     */
+    private function calculateDetailedProcessingTime($dateFrom, $dateTo)
+    {
+        $completedRequests = RequestDocument::where('status', 'released')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->with(['certificateLogs' => function($query) {
+                $query->orderBy('created_at');
+            }])
+            ->get();
+
+        $breakdown = [
+            'average_total_time' => 0,
+            'median_processing_time' => 0,
+            'stage_breakdown' => [],
+            'processing_time_distribution' => [
+                'same_day' => 0,
+                'two_to_three_days' => 0,
+                'one_week' => 0,
+                'over_week' => 0
+            ]
+        ];
+
+        if ($completedRequests->isEmpty()) {
+            return $breakdown;
+        }
+
+        $totalProcessingTime = 0;
+        $processingTimes = [];
+        $stageTimings = [];
+        $validRequests = 0;
+
+        foreach ($completedRequests as $request) {
+            $logs = $request->certificateLogs->sortBy('created_at');
+
+            if ($logs->count() < 2) {
+                // Use fallback method for requests without sufficient logs
+                $createdAt = Carbon::parse($request->created_at);
+                $updatedAt = Carbon::parse($request->updated_at);
+                $totalTime = $createdAt->diffInDays($updatedAt);
+            } else {
+                $requestStart = Carbon::parse($logs->first()->created_at);
+                $requestEnd = Carbon::parse($logs->last()->created_at);
+                $totalTime = $requestStart->diffInDays($requestEnd);
+
+                // Calculate time between stages
+                $previousLog = null;
+                foreach ($logs as $log) {
+                    if ($previousLog) {
+                        $stageDuration = Carbon::parse($previousLog->created_at)
+                            ->diffInDays(Carbon::parse($log->created_at));
+
+                        $stageKey = $this->getStageFromRemark($log->remark);
+                        if (!isset($stageTimings[$stageKey])) {
+                            $stageTimings[$stageKey] = [];
+                        }
+                        $stageTimings[$stageKey][] = $stageDuration;
+                    }
+                    $previousLog = $log;
+                }
+            }
+
+            $totalProcessingTime += $totalTime;
+            $processingTimes[] = $totalTime;
+            $validRequests++;
+
+            // Categorize processing time
+            if ($totalTime <= 1) {
+                $breakdown['processing_time_distribution']['same_day']++;
+            } elseif ($totalTime <= 3) {
+                $breakdown['processing_time_distribution']['two_to_three_days']++;
+            } elseif ($totalTime <= 7) {
+                $breakdown['processing_time_distribution']['one_week']++;
+            } else {
+                $breakdown['processing_time_distribution']['over_week']++;
+            }
+        }
+
+        // Calculate averages and median
+        $breakdown['average_total_time'] = $validRequests > 0 ?
+            round($totalProcessingTime / $validRequests, 2) : 0;
+
+        // Calculate median
+        sort($processingTimes);
+        $count = count($processingTimes);
+        if ($count > 0) {
+            $middle = floor($count / 2);
+            if ($count % 2 == 0) {
+                $breakdown['median_processing_time'] = round(($processingTimes[$middle - 1] + $processingTimes[$middle]) / 2, 2);
+            } else {
+                $breakdown['median_processing_time'] = $processingTimes[$middle];
+            }
+        }
+
+        // Calculate average time for each stage
+        foreach ($stageTimings as $stage => $times) {
+            $breakdown['stage_breakdown'][$stage] = [
+                'average_days' => round(array_sum($times) / count($times), 2),
+                'min_days' => min($times),
+                'max_days' => max($times),
+                'occurrences' => count($times)
+            ];
+        }
+
+        return $breakdown;
+    }
+
+    /**
+     * Helper method to extract stage from remark
+     */
+    private function getStageFromRemark($remark)
+    {
+        $remark = strtolower($remark);
+
+        if (strpos($remark, 'approved') !== false) {
+            return 'approval';
+        } elseif (strpos($remark, 'processing') !== false) {
+            return 'processing';
+        } elseif (strpos($remark, 'ready') !== false || strpos($remark, 'pickup') !== false) {
+            return 'ready_for_pickup';
+        } elseif (strpos($remark, 'released') !== false) {
+            return 'release';
+        } else {
+            return 'other';
+        }
     }
 
     /**
@@ -634,15 +792,22 @@ class DashboardController extends Controller
                 }
             }
 
+            $response = [
+                'success' => true,
+                'data' => $report['data'],
+                'date_range' => [
+                    'from' => $dateFrom->format('Y-m-d'),
+                    'to' => $dateTo->format('Y-m-d')
+                ],
+                'report_info' => $report['report_info']
+            ];
+
             // Add summary if requested
             if ($format === 'summary') {
-                $report['summary'] = $this->generateReportSummary($report['data'], $dateFrom, $dateTo);
+                $response['summary'] = $this->generateReportSummary($report['data'], $dateFrom, $dateTo);
             }
 
-            return response()->json([
-                'success' => true,
-                'report' => $report
-            ]);
+            return response()->json($response);
 
         } catch (\Exception $e) {
             return response()->json([
