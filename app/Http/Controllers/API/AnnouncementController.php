@@ -52,7 +52,7 @@ class AnnouncementController extends Controller
             'type' => 'required|string|in:information,problem,warning',
             'description' => 'required|string',
             'images' => 'nullable|array',
-            'images.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048', // validate each file
+            'images.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120', // validate each file
         ]);
 
         if ($validator->fails()) {

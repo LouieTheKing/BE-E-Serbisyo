@@ -35,11 +35,11 @@ class AuthController extends Controller
                 'street' => 'required|string',
                 'pwd_number' => 'nullable|string',
                 'single_parent_number' => 'nullable|string',
-                'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+                'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
                 'civil_status' => 'required|string|in:single,married,widowed,divorced,separated',
-                'back_id_card' => 'required|image|mimes:jpeg,jpg,png|max:2048',
-                'front_id_card' => 'required|image|mimes:jpeg,jpg,png|max:2048',
-                'selfie_id_card' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+                'back_id_card' => 'required|image|mimes:jpeg,jpg,png|max:5120',
+                'front_id_card' => 'required|image|mimes:jpeg,jpg,png|max:5120',
+                'selfie_id_card' => 'required|image|mimes:jpeg,jpg,png|max:5120',
             ]);
 
             if ($validator->fails()) {
@@ -196,7 +196,7 @@ class AuthController extends Controller
                 'type' => 'required|string|in:residence,admin,staff',
                 'pwd_number' => 'nullable|string',
                 'single_parent_number' => 'nullable|string',
-                'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+                'profile_picture' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
                 'civil_status' => 'required|string|in:single,married,widowed,divorced,separated',
             ]);
 

@@ -206,7 +206,7 @@ class AccountController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'profile_picture' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+                'profile_picture' => 'required|image|mimes:jpeg,jpg,png|max:5120',
             ]);
 
             if ($validator->fails()) {

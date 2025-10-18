@@ -20,7 +20,7 @@ class OfficialsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'position' => 'required|string|max:255',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
             'term_start' => 'required|date',
             'term_end' => 'required|date|after_or_equal:term_start',
             'status' => 'required|in:active,inactive',
@@ -113,7 +113,7 @@ class OfficialsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'position' => 'sometimes|required|string|max:255',
-            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:5120',
             'term_start' => 'sometimes|required|date',
             'term_end' => 'sometimes|required|date|after_or_equal:term_start',
             'status' => 'sometimes|required|in:active,inactive',
