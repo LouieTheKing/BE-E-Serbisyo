@@ -122,6 +122,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Performance metrics
         Route::get('/performance', [DashboardController::class, 'performanceMetrics']);
         Route::get('/monthly-comparison', [DashboardController::class, 'monthlyComparison']);
+
+        // Reports
+        Route::post('/generate-report', [DashboardController::class, 'generateReport']);
     });
 });
 
