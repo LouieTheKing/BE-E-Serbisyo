@@ -114,38 +114,23 @@ class DocumentsController extends Controller
             // Update document info
             $document->update($request->only(['document_name', 'description', 'status', 'template_path', 'template_fields']));
 
-            // Handle requirements update if provided
+            // Handle requirements replacement if provided
             if ($request->has('requirements')) {
-                $reqIds = [];
+                // Delete all existing requirements first
+                $document->requirements()->delete();
 
+                // Create all new requirements
                 foreach ($request->requirements as $reqData) {
-                    if (isset($reqData['id'])) {
-                        // Update existing requirement
-                        $requirement = $document->requirements()->find($reqData['id']);
-                        if ($requirement) {
-                            $requirement->update([
-                                'name' => $reqData['name'],
-                                'description' => $reqData['description'],
-                            ]);
-                            $reqIds[] = $requirement->id;
-                        }
-                    } else {
-                        // Create new requirement
-                        $newReq = $document->requirements()->create([
-                            'name' => $reqData['name'],
-                            'description' => $reqData['description'],
-                        ]);
-                        $reqIds[] = $newReq->id;
-                    }
+                    $document->requirements()->create([
+                        'name' => $reqData['name'],
+                        'description' => $reqData['description'],
+                    ]);
                 }
-
-                // Delete requirements not included anymore
-                $document->requirements()->whereNotIn('id', $reqIds)->delete();
             }
 
             return response()->json([
                 'message' => 'Document updated successfully',
-                'document' => $document->load('requirements')
+                'document' => $document->fresh()->load('requirements')
             ]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
