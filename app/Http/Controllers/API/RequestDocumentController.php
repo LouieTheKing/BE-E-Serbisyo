@@ -183,6 +183,24 @@ class RequestDocumentController extends Controller
     {
         $query = RequestDocument::query();
 
+        // Search (broad across transaction, status, account, document)
+        if ($request->filled('search')) {
+            $term = $request->input('search');
+            $query->where(function ($q) use ($term) {
+                $q->where('transaction_id', 'like', "%{$term}%")
+                  ->orWhere('status', 'like', "%{$term}%")
+                  ->orWhere('id', $term)
+                  ->orWhereHas('account', function ($qa) use ($term) {
+                      $qa->where('first_name', 'like', "%{$term}%")
+                         ->orWhere('last_name', 'like', "%{$term}%")
+                         ->orWhere('email', 'like', "%{$term}%");
+                  })
+                  ->orWhereHas('documentDetails', function ($qd) use ($term) {
+                      $qd->where('document_name', 'like', "%{$term}%");
+                  });
+            });
+        }
+
         // Filters
         if ($request->has('status')) {
             $query->where('status', $request->input('status'));
@@ -199,7 +217,7 @@ class RequestDocumentController extends Controller
         $order = $request->query('order', 'desc');
 
         // Allowed sortable columns
-        $allowedSorts = ['created_at', 'document'];
+        $allowedSorts = ['created_at', 'document', 'transaction_id', 'status'];
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'created_at';
         }
