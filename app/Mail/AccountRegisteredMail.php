@@ -12,13 +12,15 @@ class AccountRegisteredMail extends Mailable
     use Queueable, SerializesModels;
 
     public $account;
+    public $password;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Account $account)
+    public function __construct(Account $account, $password = null)
     {
         $this->account = $account;
+        $this->password = $password;
     }
 
     /**

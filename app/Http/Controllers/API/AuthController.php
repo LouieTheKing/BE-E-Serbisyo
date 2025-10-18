@@ -253,7 +253,11 @@ class AuthController extends Controller
                 'profile_picture_path' => $profilePicturePath,
                 'civil_status' => $request->civil_status
             ]);
-            Mail::to($account->email)->send(new AccountRegisteredMail($account));
+
+            // Store the plain password to send in email (using email as default password)
+            $plainPassword = $request->email;
+
+            Mail::to($account->email)->send(new AccountRegisteredMail($account, $plainPassword));
 
             // Log the activity
             $this->logActivity('Account Management', "Created new {$account->type} account for: {$account->first_name} {$account->last_name} ({$account->email})");
