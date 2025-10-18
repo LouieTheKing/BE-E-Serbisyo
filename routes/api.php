@@ -64,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Certificate Logs Routes
     Route::get('/certificate-logs', [CertificateLogsController::class, 'index']);
     Route::get('/certificate-logs/{id}', [CertificateLogsController::class, 'show']);
+    Route::post('/certificate-logs/create', [CertificateLogsController::class, 'create']);
 
     // Officials Routes
     Route::post('/officials/create', [\App\Http\Controllers\API\OfficialsController::class, 'store']);
