@@ -81,6 +81,7 @@ class RequestDocumentController extends Controller
                             'document' => $requestDocument->document,
                             'requirement' => $reqData['requirement_id'],
                             'file_path' => $path,
+                            'request_document_id' => $requestDocument->id
                         ]);
 
                         $uploads[] = $upload;
@@ -88,7 +89,7 @@ class RequestDocumentController extends Controller
                 }
             }
 
-            // Load relationships for email
+            // Load relationships for email 
             $requestDocument->load(['account', 'documentDetails']);
 
             // Create initial certificate log
