@@ -658,15 +658,43 @@ class DashboardController extends Controller
      */
     private function generateOverviewReport($dateFrom, $dateTo)
     {
+        $totalRequests = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $totalUsers = Account::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $totalFeedbacks = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $totalBlotters = Blotter::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+
+        // Calculate period length for daily averages
+        $periodDays = max(1, $dateFrom->diffInDays($dateTo));
+
         return [
-            'total_users' => Account::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'total_requests' => RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'total_blotters' => Blotter::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'total_feedbacks' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'total_announcements' => Announcement::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'total_certificate_logs' => CertificateLog::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'total_activity_logs' => ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'average_rating' => round(Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->avg('rating') ?? 0, 2)
+            'totals' => [
+                'total_users' => $totalUsers,
+                'total_requests' => $totalRequests,
+                'total_blotters' => $totalBlotters,
+                'total_feedbacks' => $totalFeedbacks,
+                'total_announcements' => Announcement::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
+                'total_certificate_logs' => CertificateLog::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
+                'total_activity_logs' => ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
+            ],
+            'averages' => [
+                'daily_users' => round($totalUsers / $periodDays, 2),
+                'daily_requests' => round($totalRequests / $periodDays, 2),
+                'daily_blotters' => round($totalBlotters / $periodDays, 2),
+                'daily_feedbacks' => round($totalFeedbacks / $periodDays, 2),
+                'feedback_rating' => round(Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->avg('rating') ?? 0, 2),
+                'processing_time_days' => $this->calculateAverageProcessingTime($dateFrom, $dateTo)
+            ],
+            'rates' => [
+                'completion_rate' => $this->calculateCompletionRate($dateFrom, $dateTo),
+                'satisfaction_rate' => $this->calculateSatisfactionRate($dateFrom, $dateTo),
+                'blotter_resolution_rate' => $this->calculateBlotterResolutionRate($dateFrom, $dateTo),
+                'user_engagement_rate' => $totalUsers > 0 ? round(($totalRequests / $totalUsers) * 100, 2) : 0
+            ],
+            'period_info' => [
+                'period_days' => $periodDays,
+                'period_weeks' => round($periodDays / 7, 1),
+                'period_months' => round($periodDays / 30, 1)
+            ]
         ];
     }
 
@@ -675,30 +703,65 @@ class DashboardController extends Controller
      */
     private function generateUserReport($dateFrom, $dateTo, $reportType)
     {
+        $totalRegistered = Account::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $periodDays = max(1, $dateFrom->diffInDays($dateTo));
+
+        // Get active users (those who made requests or activity logs)
+        $activeUsers = Account::whereBetween('accounts.created_at', [$dateFrom, $dateTo])
+            ->join('request_documents', 'accounts.id', '=', 'request_documents.requestor')
+            ->distinct('accounts.id')
+            ->count();
+
         $data = [
-            'total_registered' => Account::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'by_type' => Account::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select('type', DB::raw('count(*) as count'))
-                ->groupBy('type')
-                ->get(),
-            'by_status' => Account::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select('status', DB::raw('count(*) as count'))
-                ->groupBy('status')
-                ->get(),
-            'by_municipality' => Account::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select('municipality', DB::raw('count(*) as count'))
-                ->groupBy('municipality')
-                ->orderByDesc('count')
-                ->limit(10)
-                ->get()
+            'summary' => [
+                'total_registered' => $totalRegistered,
+                'active_users' => $activeUsers,
+                'activation_rate' => $totalRegistered > 0 ? round(($activeUsers / $totalRegistered) * 100, 2) : 0,
+                'daily_average_registrations' => round($totalRegistered / $periodDays, 2)
+            ],
+            'demographics' => [
+                'by_type' => Account::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select('type', DB::raw('count(*) as count'))
+                    ->groupBy('type')
+                    ->get(),
+                'by_status' => Account::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select('status', DB::raw('count(*) as count'))
+                    ->groupBy('status')
+                    ->get(),
+                'by_municipality' => Account::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select('municipality', DB::raw('count(*) as count'))
+                    ->groupBy('municipality')
+                    ->orderByDesc('count')
+                    ->limit(10)
+                    ->get()
+            ],
+            'engagement' => [
+                'users_with_requests' => Account::whereBetween('accounts.created_at', [$dateFrom, $dateTo])
+                    ->join('request_documents', 'accounts.id', '=', 'request_documents.requestor')
+                    ->distinct('accounts.id')
+                    ->count(),
+                'users_with_feedback' => Account::whereBetween('accounts.created_at', [$dateFrom, $dateTo])
+                    ->join('feedbacks', 'accounts.id', '=', 'feedbacks.user')
+                    ->distinct('accounts.id')
+                    ->count(),
+                'average_requests_per_user' => $totalRegistered > 0 ?
+                    round(RequestDocument::join('accounts', 'request_documents.requestor', '=', 'accounts.id')
+                        ->whereBetween('accounts.created_at', [$dateFrom, $dateTo])
+                        ->count() / $totalRegistered, 2) : 0
+            ]
         ];
 
         if ($reportType === 'yearly') {
-            $data['monthly_breakdown'] = Account::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select(DB::raw('MONTH(created_at) as month'), DB::raw('count(*) as count'))
-                ->groupBy('month')
-                ->orderBy('month')
-                ->get();
+            $data['trends'] = [
+                'monthly_breakdown' => Account::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select(DB::raw('MONTH(created_at) as month'),
+                             DB::raw('MONTHNAME(created_at) as month_name'),
+                             DB::raw('count(*) as count'))
+                    ->groupBy('month', 'month_name')
+                    ->orderBy('month')
+                    ->get(),
+                'growth_rate' => $this->calculateUserGrowthRate($dateFrom, $dateTo)
+            ];
         }
 
         return $data;
@@ -712,30 +775,90 @@ class DashboardController extends Controller
         $totalRequests = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])->count();
         $completedRequests = RequestDocument::where('status', 'released')
             ->whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $pendingRequests = RequestDocument::where('status', 'pending')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $rejectedRequests = RequestDocument::where('status', 'rejected')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])->count();
+
+        $periodDays = max(1, $dateFrom->diffInDays($dateTo));
+        $avgProcessingTime = $this->calculateAverageProcessingTime($dateFrom, $dateTo);
 
         $data = [
-            'total_requests' => $totalRequests,
-            'completed_requests' => $completedRequests,
-            'completion_rate' => $totalRequests > 0 ? round(($completedRequests / $totalRequests) * 100, 2) : 0,
-            'by_status' => RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
+            'summary' => [
+                'total_requests' => $totalRequests,
+                'completed_requests' => $completedRequests,
+                'pending_requests' => $pendingRequests,
+                'rejected_requests' => $rejectedRequests,
+                'in_progress_requests' => RequestDocument::whereIn('status', ['approved', 'processing', 'ready to pickup'])
+                    ->whereBetween('created_at', [$dateFrom, $dateTo])->count()
+            ],
+            'performance_metrics' => [
+                'completion_rate' => $totalRequests > 0 ? round(($completedRequests / $totalRequests) * 100, 2) : 0,
+                'rejection_rate' => $totalRequests > 0 ? round(($rejectedRequests / $totalRequests) * 100, 2) : 0,
+                'pending_rate' => $totalRequests > 0 ? round(($pendingRequests / $totalRequests) * 100, 2) : 0,
+                'average_processing_time_days' => $avgProcessingTime,
+                'daily_average_requests' => round($totalRequests / $periodDays, 2)
+            ],
+            'status_breakdown' => RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
                 ->select('status', DB::raw('count(*) as count'))
                 ->groupBy('status')
-                ->get(),
-            'by_document_type' => RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->join('documents', 'request_documents.document', '=', 'documents.id')
-                ->select('documents.document_name', DB::raw('count(*) as count'))
-                ->groupBy('documents.document_name')
                 ->orderByDesc('count')
                 ->get(),
-            'average_processing_time' => $this->calculateAverageProcessingTime($dateFrom, $dateTo)
+            'document_analytics' => [
+                'by_document_type' => RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+                    ->join('documents', 'request_documents.document', '=', 'documents.id')
+                    ->select('documents.document_name',
+                             DB::raw('count(*) as total_requests'),
+                             DB::raw('AVG(CASE WHEN request_documents.status = "released" THEN DATEDIFF(request_documents.updated_at, request_documents.created_at) END) as avg_processing_days'),
+                             DB::raw('SUM(CASE WHEN request_documents.status = "released" THEN 1 ELSE 0 END) as completed'),
+                             DB::raw('ROUND((SUM(CASE WHEN request_documents.status = "released" THEN 1 ELSE 0 END) * 100.0 / count(*)), 2) as completion_rate'))
+                    ->groupBy('documents.id', 'documents.document_name')
+                    ->orderByDesc('total_requests')
+                    ->get(),
+                'most_requested' => RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+                    ->join('documents', 'request_documents.document', '=', 'documents.id')
+                    ->select('documents.document_name', DB::raw('count(*) as count'))
+                    ->groupBy('documents.document_name')
+                    ->orderByDesc('count')
+                    ->limit(5)
+                    ->get(),
+                'fastest_processed' => RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+                    ->join('documents', 'request_documents.document', '=', 'documents.id')
+                    ->where('request_documents.status', 'released')
+                    ->select('documents.document_name',
+                             DB::raw('AVG(DATEDIFF(request_documents.updated_at, request_documents.created_at)) as avg_days'))
+                    ->groupBy('documents.document_name')
+                    ->orderBy('avg_days')
+                    ->limit(5)
+                    ->get()
+            ],
+            'time_analysis' => [
+                'processing_time_distribution' => RequestDocument::where('status', 'released')
+                    ->whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select(
+                        DB::raw('SUM(CASE WHEN DATEDIFF(updated_at, created_at) <= 1 THEN 1 ELSE 0 END) as same_day'),
+                        DB::raw('SUM(CASE WHEN DATEDIFF(updated_at, created_at) BETWEEN 2 AND 3 THEN 1 ELSE 0 END) as two_to_three_days'),
+                        DB::raw('SUM(CASE WHEN DATEDIFF(updated_at, created_at) BETWEEN 4 AND 7 THEN 1 ELSE 0 END) as one_week'),
+                        DB::raw('SUM(CASE WHEN DATEDIFF(updated_at, created_at) > 7 THEN 1 ELSE 0 END) as over_week')
+                    )
+                    ->first(),
+                'median_processing_time' => $this->calculateMedianProcessingTime($dateFrom, $dateTo)
+            ]
         ];
 
         if ($reportType === 'yearly') {
-            $data['monthly_breakdown'] = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select(DB::raw('MONTH(created_at) as month'), DB::raw('count(*) as count'))
-                ->groupBy('month')
-                ->orderBy('month')
-                ->get();
+            $data['trends'] = [
+                'monthly_breakdown' => RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+                    ->select(DB::raw('MONTH(request_documents.created_at) as month'),
+                             DB::raw('MONTHNAME(request_documents.created_at) as month_name'),
+                             DB::raw('count(*) as total_requests'),
+                             DB::raw('SUM(CASE WHEN status = "released" THEN 1 ELSE 0 END) as completed'),
+                             DB::raw('ROUND((SUM(CASE WHEN status = "released" THEN 1 ELSE 0 END) * 100.0 / count(*)), 2) as completion_rate'))
+                    ->groupBy('month', 'month_name')
+                    ->orderBy('month')
+                    ->get(),
+                'seasonal_patterns' => $this->calculateSeasonalRequestPatterns($dateFrom, $dateTo)
+            ];
         }
 
         return $data;
@@ -776,27 +899,80 @@ class DashboardController extends Controller
      */
     private function generateFeedbackReport($dateFrom, $dateTo, $reportType)
     {
+        $totalFeedbacks = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $avgRating = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->avg('rating') ?? 0;
+        $periodDays = max(1, $dateFrom->diffInDays($dateTo));
+
         $data = [
-            'total_feedbacks' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'average_rating' => round(Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->avg('rating') ?? 0, 2),
-            'by_rating' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select('rating', DB::raw('count(*) as count'))
-                ->groupBy('rating')
-                ->orderBy('rating')
-                ->get(),
-            'by_category' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select('category', DB::raw('count(*) as count'))
-                ->groupBy('category')
-                ->get(),
-            'satisfaction_rate' => $this->calculateSatisfactionRate($dateFrom, $dateTo)
+            'summary' => [
+                'total_feedbacks' => $totalFeedbacks,
+                'average_rating' => round($avgRating, 2),
+                'daily_average_feedbacks' => round($totalFeedbacks / $periodDays, 2),
+                'satisfaction_rate' => $this->calculateSatisfactionRate($dateFrom, $dateTo),
+                'response_rate' => $this->calculateFeedbackResponseRate($dateFrom, $dateTo)
+            ],
+            'rating_analysis' => [
+                'by_rating' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select('rating', DB::raw('count(*) as count'))
+                    ->groupBy('rating')
+                    ->orderBy('rating')
+                    ->get(),
+                'rating_distribution' => [
+                    'excellent' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', 5)->count(),
+                    'good' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', 4)->count(),
+                    'average' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', 3)->count(),
+                    'poor' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', 2)->count(),
+                    'very_poor' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', 1)->count()
+                ],
+                'rating_statistics' => [
+                    'median_rating' => $this->calculateMedianRating($dateFrom, $dateTo),
+                    'mode_rating' => $this->calculateModeRating($dateFrom, $dateTo),
+                    'standard_deviation' => $this->calculateRatingStandardDeviation($dateFrom, $dateTo)
+                ]
+            ],
+            'category_analysis' => [
+                'by_category' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select('category', DB::raw('count(*) as count'), DB::raw('AVG(rating) as avg_rating'))
+                    ->groupBy('category')
+                    ->orderByDesc('count')
+                    ->get(),
+                'best_performing_categories' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select('category', DB::raw('AVG(rating) as avg_rating'), DB::raw('count(*) as count'))
+                    ->groupBy('category')
+                    ->having('count', '>=', 3) // Only categories with at least 3 feedbacks
+                    ->orderByDesc('avg_rating')
+                    ->limit(5)
+                    ->get(),
+                'improvement_areas' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select('category', DB::raw('AVG(rating) as avg_rating'), DB::raw('count(*) as count'))
+                    ->groupBy('category')
+                    ->having('count', '>=', 3)
+                    ->orderBy('avg_rating')
+                    ->limit(3)
+                    ->get()
+            ],
+            'sentiment_analysis' => [
+                'positive_feedback' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', '>=', 4)->count(),
+                'neutral_feedback' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', 3)->count(),
+                'negative_feedback' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', '<=', 2)->count(),
+                'positive_percentage' => $totalFeedbacks > 0 ? round((Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->where('rating', '>=', 4)->count() / $totalFeedbacks) * 100, 2) : 0,
+                'nps_score' => $this->calculateNPSScore($dateFrom, $dateTo)
+            ]
         ];
 
         if ($reportType === 'yearly') {
-            $data['monthly_breakdown'] = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select(DB::raw('MONTH(created_at) as month'), DB::raw('AVG(rating) as avg_rating'), DB::raw('count(*) as count'))
-                ->groupBy('month')
-                ->orderBy('month')
-                ->get();
+            $data['trends'] = [
+                'monthly_breakdown' => Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->select(DB::raw('MONTH(created_at) as month'),
+                             DB::raw('MONTHNAME(created_at) as month_name'),
+                             DB::raw('AVG(rating) as avg_rating'),
+                             DB::raw('count(*) as count'))
+                    ->groupBy('month', 'month_name')
+                    ->orderBy('month')
+                    ->get(),
+                'rating_trend' => $this->calculateRatingTrend($dateFrom, $dateTo),
+                'seasonal_satisfaction' => $this->calculateSeasonalSatisfaction($dateFrom, $dateTo)
+            ];
         }
 
         return $data;
@@ -833,7 +1009,7 @@ class DashboardController extends Controller
     {
         $data = [
             'total_logs' => CertificateLog::whereBetween('created_at', [$dateFrom, $dateTo])->count(),
-            'by_staff' => CertificateLog::whereBetween('created_at', [$dateFrom, $dateTo])
+            'by_staff' => CertificateLog::whereBetween('certificate_logs.created_at', [$dateFrom, $dateTo])
                 ->join('accounts', 'certificate_logs.staff', '=', 'accounts.id')
                 ->select(DB::raw('CONCAT(accounts.first_name, " ", accounts.last_name) as staff_name'), DB::raw('count(*) as count'))
                 ->groupBy('accounts.id', 'accounts.first_name', 'accounts.last_name')
@@ -842,8 +1018,8 @@ class DashboardController extends Controller
         ];
 
         if ($reportType === 'yearly') {
-            $data['monthly_breakdown'] = CertificateLog::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select(DB::raw('MONTH(created_at) as month'), DB::raw('count(*) as count'))
+            $data['monthly_breakdown'] = CertificateLog::whereBetween('certificate_logs.created_at', [$dateFrom, $dateTo])
+                ->select(DB::raw('MONTH(certificate_logs.created_at) as month'), DB::raw('count(*) as count'))
                 ->groupBy('month')
                 ->orderBy('month')
                 ->get();
@@ -864,7 +1040,7 @@ class DashboardController extends Controller
                 ->groupBy('module')
                 ->orderByDesc('count')
                 ->get(),
-            'top_users' => ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
+            'top_users' => ActivityLog::whereBetween('activity_logs.created_at', [$dateFrom, $dateTo])
                 ->join('accounts', 'activity_logs.account', '=', 'accounts.id')
                 ->select(DB::raw('CONCAT(accounts.first_name, " ", accounts.last_name) as user_name'), DB::raw('count(*) as count'))
                 ->groupBy('accounts.id', 'accounts.first_name', 'accounts.last_name')
@@ -874,8 +1050,8 @@ class DashboardController extends Controller
         ];
 
         if ($reportType === 'yearly') {
-            $data['monthly_breakdown'] = ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->select(DB::raw('MONTH(created_at) as month'), DB::raw('count(*) as count'))
+            $data['monthly_breakdown'] = ActivityLog::whereBetween('activity_logs.created_at', [$dateFrom, $dateTo])
+                ->select(DB::raw('MONTH(activity_logs.created_at) as month'), DB::raw('count(*) as count'))
                 ->groupBy('month')
                 ->orderBy('month')
                 ->get();
@@ -892,7 +1068,7 @@ class DashboardController extends Controller
         $data = [
             'total_documents' => Document::count(),
             'active_documents' => Document::where('status', 'active')->count(),
-            'most_requested' => RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
+            'most_requested' => RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
                 ->join('documents', 'request_documents.document', '=', 'documents.id')
                 ->select('documents.document_name', DB::raw('count(*) as count'))
                 ->groupBy('documents.id', 'documents.document_name')
@@ -943,36 +1119,265 @@ class DashboardController extends Controller
         // Key metrics
         if (isset($data['overview'])) {
             $summary['key_metrics'] = [
-                'New users registered: ' . ($data['overview']['total_users'] ?? 0),
-                'Total document requests: ' . ($data['overview']['total_requests'] ?? 0),
-                'Blotter cases filed: ' . ($data['overview']['total_blotters'] ?? 0),
-                'Average satisfaction rating: ' . ($data['overview']['average_rating'] ?? 0) . '/5'
+                'New users registered: ' . ($data['overview']['totals']['total_users'] ?? 0),
+                'Total document requests: ' . ($data['overview']['totals']['total_requests'] ?? 0),
+                'Blotter cases filed: ' . ($data['overview']['totals']['total_blotters'] ?? 0),
+                'Average satisfaction rating: ' . ($data['overview']['averages']['feedback_rating'] ?? 0) . '/5'
             ];
         }
 
         // Performance indicators
         if (isset($data['requests'])) {
-            $completionRate = $data['requests']['completion_rate'] ?? 0;
-            $processingTime = $data['requests']['average_processing_time'] ?? 0;
+            $completionRate = $data['requests']['performance_metrics']['completion_rate'] ?? 0;
+            $processingTime = $data['requests']['performance_metrics']['average_processing_time_days'] ?? 0;
 
             $summary['trends'][] = "Document completion rate: " . $completionRate . "%";
             $summary['trends'][] = "Average processing time: " . $processingTime . " days";
-        }
-
-        if (isset($data['feedbacks'])) {
-            $satisfactionRate = $data['feedbacks']['satisfaction_rate'] ?? 0;
+        }        if (isset($data['feedbacks'])) {
+            $satisfactionRate = $data['feedbacks']['summary']['satisfaction_rate'] ?? 0;
             $summary['trends'][] = "Customer satisfaction rate: " . $satisfactionRate . "%";
         }
 
         // Basic recommendations
-        if (isset($data['requests']['completion_rate']) && $data['requests']['completion_rate'] < 80) {
+        if (isset($data['requests']['performance_metrics']['completion_rate']) && $data['requests']['performance_metrics']['completion_rate'] < 80) {
             $summary['recommendations'][] = "Consider improving document processing workflow to increase completion rate";
         }
 
-        if (isset($data['feedbacks']['average_rating']) && $data['feedbacks']['average_rating'] < 4) {
+        if (isset($data['feedbacks']['summary']['average_rating']) && $data['feedbacks']['summary']['average_rating'] < 4) {
             $summary['recommendations'][] = "Focus on service quality improvement to increase satisfaction ratings";
         }
 
         return $summary;
+    }
+
+    /**
+     * Calculate completion rate for requests
+     */
+    private function calculateCompletionRate($dateFrom, $dateTo)
+    {
+        $totalRequests = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $completedRequests = RequestDocument::where('status', 'released')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])->count();
+
+        return $totalRequests > 0 ? round(($completedRequests / $totalRequests) * 100, 2) : 0;
+    }
+
+    /**
+     * Calculate user growth rate
+     */
+    private function calculateUserGrowthRate($dateFrom, $dateTo)
+    {
+        $currentPeriodUsers = Account::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $periodLength = $dateFrom->diffInDays($dateTo);
+
+        // Calculate previous period
+        $previousDateFrom = $dateFrom->copy()->subDays($periodLength);
+        $previousDateTo = $dateFrom->copy()->subDay();
+        $previousPeriodUsers = Account::whereBetween('created_at', [$previousDateFrom, $previousDateTo])->count();
+
+        if ($previousPeriodUsers == 0) {
+            return $currentPeriodUsers > 0 ? 100 : 0;
+        }
+
+        return round((($currentPeriodUsers - $previousPeriodUsers) / $previousPeriodUsers) * 100, 2);
+    }
+
+    /**
+     * Calculate median processing time
+     */
+    private function calculateMedianProcessingTime($dateFrom, $dateTo)
+    {
+        $processingTimes = RequestDocument::where('status', 'released')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->selectRaw('DATEDIFF(updated_at, created_at) as processing_days')
+            ->orderBy('processing_days')
+            ->pluck('processing_days')
+            ->toArray();
+
+        if (empty($processingTimes)) {
+            return 0;
+        }
+
+        $count = count($processingTimes);
+        $middle = floor($count / 2);
+
+        if ($count % 2 == 0) {
+            return ($processingTimes[$middle - 1] + $processingTimes[$middle]) / 2;
+        } else {
+            return $processingTimes[$middle];
+        }
+    }
+
+    /**
+     * Calculate seasonal request patterns
+     */
+    private function calculateSeasonalRequestPatterns($dateFrom, $dateTo)
+    {
+        return RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->select(
+                DB::raw('QUARTER(created_at) as quarter'),
+                DB::raw('count(*) as requests'),
+                DB::raw('AVG(CASE WHEN status = "released" THEN DATEDIFF(updated_at, created_at) END) as avg_processing_time')
+            )
+            ->groupBy('quarter')
+            ->orderBy('quarter')
+            ->get()
+            ->map(function ($item) {
+                $quarters = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+                return [
+                    'quarter' => $quarters[$item->quarter - 1] ?? 'Q' . $item->quarter,
+                    'requests' => $item->requests,
+                    'avg_processing_time' => round($item->avg_processing_time ?? 0, 2)
+                ];
+            });
+    }
+
+    /**
+     * Calculate feedback response rate
+     */
+    private function calculateFeedbackResponseRate($dateFrom, $dateTo)
+    {
+        $totalRequests = RequestDocument::where('status', 'released')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])->count();
+        $requestsWithFeedback = RequestDocument::where('status', 'released')
+            ->whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+            ->join('feedbacks', 'request_documents.requestor', '=', 'feedbacks.user')
+            ->distinct('request_documents.id')
+            ->count();
+
+        return $totalRequests > 0 ? round(($requestsWithFeedback / $totalRequests) * 100, 2) : 0;
+    }
+
+    /**
+     * Calculate median rating
+     */
+    private function calculateMedianRating($dateFrom, $dateTo)
+    {
+        $ratings = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->orderBy('rating')
+            ->pluck('rating')
+            ->toArray();
+
+        if (empty($ratings)) {
+            return 0;
+        }
+
+        $count = count($ratings);
+        $middle = floor($count / 2);
+
+        if ($count % 2 == 0) {
+            return ($ratings[$middle - 1] + $ratings[$middle]) / 2;
+        } else {
+            return $ratings[$middle];
+        }
+    }
+
+    /**
+     * Calculate mode rating (most frequent rating)
+     */
+    private function calculateModeRating($dateFrom, $dateTo)
+    {
+        $ratingCounts = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->select('rating', DB::raw('count(*) as count'))
+            ->groupBy('rating')
+            ->orderByDesc('count')
+            ->first();
+
+        return $ratingCounts ? $ratingCounts->rating : 0;
+    }
+
+    /**
+     * Calculate rating standard deviation
+     */
+    private function calculateRatingStandardDeviation($dateFrom, $dateTo)
+    {
+        $ratings = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->pluck('rating')
+            ->toArray();
+
+        if (empty($ratings)) {
+            return 0;
+        }
+
+        $mean = array_sum($ratings) / count($ratings);
+        $squaredDifferences = array_map(function($rating) use ($mean) {
+            return pow($rating - $mean, 2);
+        }, $ratings);
+
+        $variance = array_sum($squaredDifferences) / count($ratings);
+        return round(sqrt($variance), 2);
+    }
+
+    /**
+     * Calculate NPS Score (Net Promoter Score)
+     */
+    private function calculateNPSScore($dateFrom, $dateTo)
+    {
+        $totalFeedbacks = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+
+        if ($totalFeedbacks == 0) {
+            return 0;
+        }
+
+        $promoters = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->whereIn('rating', [4, 5])->count();
+        $detractors = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->whereIn('rating', [1, 2])->count();
+
+        $promoterPercentage = ($promoters / $totalFeedbacks) * 100;
+        $detractorPercentage = ($detractors / $totalFeedbacks) * 100;
+
+        return round($promoterPercentage - $detractorPercentage, 2);
+    }
+
+    /**
+     * Calculate rating trend
+     */
+    private function calculateRatingTrend($dateFrom, $dateTo)
+    {
+        $monthlyRatings = Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->select(DB::raw('MONTH(created_at) as month'), DB::raw('AVG(rating) as avg_rating'))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        if ($monthlyRatings->count() < 2) {
+            return 'insufficient_data';
+        }
+
+        $first = $monthlyRatings->first()->avg_rating;
+        $last = $monthlyRatings->last()->avg_rating;
+
+        if ($last > $first + 0.2) {
+            return 'improving';
+        } elseif ($last < $first - 0.2) {
+            return 'declining';
+        } else {
+            return 'stable';
+        }
+    }
+
+    /**
+     * Calculate seasonal satisfaction
+     */
+    private function calculateSeasonalSatisfaction($dateFrom, $dateTo)
+    {
+        return Feedback::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->select(
+                DB::raw('QUARTER(created_at) as quarter'),
+                DB::raw('AVG(rating) as avg_rating'),
+                DB::raw('count(*) as feedbacks')
+            )
+            ->groupBy('quarter')
+            ->orderBy('quarter')
+            ->get()
+            ->map(function ($item) {
+                $quarters = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+                return [
+                    'quarter' => $quarters[$item->quarter - 1] ?? 'Q' . $item->quarter,
+                    'avg_rating' => round($item->avg_rating, 2),
+                    'feedbacks' => $item->feedbacks
+                ];
+            });
     }
 }
