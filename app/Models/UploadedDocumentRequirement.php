@@ -12,7 +12,8 @@ class UploadedDocumentRequirement extends Model
         'uploader',
         'document',
         'requirement',
-        'file_path'
+        'file_path',
+        'request_document_id'
     ];
 
     public function account()
@@ -29,4 +30,8 @@ class UploadedDocumentRequirement extends Model
         return $this->belongsTo(DocumentRequirement::class, 'requirement');
     }
 
+    public function requestDocument()
+    {
+        return $this->belongsTo(RequestDocument::class);
+    }
 }
