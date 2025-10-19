@@ -234,6 +234,8 @@ class AccountController extends Controller
             $account = Account::findOrFail($id);
             $file = $request->file('profile_picture');
             $filename = 'profile_' . $id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            // Ensure directory exists
+            \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('profile_pictures');
             $path = $file->storeAs('profile_pictures', $filename, 'public');
             $account->profile_picture_path = '/storage/' . $path;
             $account->save();

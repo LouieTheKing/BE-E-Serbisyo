@@ -52,6 +52,8 @@ class AuthController extends Controller
             if ($request->hasFile('profile_picture')) {
                 $file = $request->file('profile_picture');
                 $filename = 'profile_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                // Ensure directory exists
+                \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('profile_pictures');
                 $path = $file->storeAs('profile_pictures', $filename, 'public');
                 $profilePicturePath = '/storage/' . $path;
             }
@@ -86,6 +88,8 @@ class AuthController extends Controller
             if ($request->hasFile('back_id_card')) {
                 $file = $request->file('back_id_card');
                 $filename = 'back_id_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                // Ensure directory exists
+                \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('account_proofs');
                 $path = $file->storeAs('account_proofs', $filename, 'public');
                 $backIdCardPath = '/storage/' . $path;
             }
@@ -94,6 +98,8 @@ class AuthController extends Controller
             if ($request->hasFile('front_id_card')) {
                 $file = $request->file('front_id_card');
                 $filename = 'front_id_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                // Ensure directory exists
+                \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('account_proofs');
                 $path = $file->storeAs('account_proofs', $filename, 'public');
                 $frontIdCardPath = '/storage/' . $path;
             }
@@ -102,6 +108,8 @@ class AuthController extends Controller
             if ($request->hasFile('selfie_id_card')) {
                 $file = $request->file('selfie_id_card');
                 $filename = 'selfie_id_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                // Ensure directory exists
+                \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('account_proofs');
                 $path = $file->storeAs('account_proofs', $filename, 'public');
                 $selfieIdCardPath = '/storage/' . $path;
             }
@@ -225,6 +233,8 @@ class AuthController extends Controller
             if ($request->hasFile('profile_picture')) {
                 $file = $request->file('profile_picture');
                 $filename = 'profile_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                // Ensure directory exists
+                \Illuminate\Support\Facades\Storage::disk('public')->makeDirectory('profile_pictures');
                 $path = $file->storeAs('profile_pictures', $filename, 'public');
                 $profilePicturePath = '/storage/' . $path;
             }

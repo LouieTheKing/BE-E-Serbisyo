@@ -196,6 +196,8 @@ class DocumentsController extends Controller
             $file = $request->file('template');
             $extension = $file->getClientOriginalExtension();
             $filename = $document->id . '_' . time() . '.' . $extension;
+            // Ensure directory exists
+            Storage::disk('public')->makeDirectory('document_templates');
             $path = $file->storeAs('document_templates', $filename, 'public');
 
             // Update the document with the template path

@@ -76,6 +76,8 @@ class RequestDocumentController extends Controller
             if ($request->has('requirements')) {
                 foreach ($request->requirements as $reqData) {
                     if (isset($reqData['file'])) {
+                        // Ensure directory exists
+                        Storage::disk('public')->makeDirectory('requirements');
                         $path = $reqData['file']->store('requirements', 'public');
 
                         $upload = UploadedDocumentRequirement::create([
@@ -317,6 +319,8 @@ class RequestDocumentController extends Controller
 
             $requestDocument = RequestDocument::findOrFail($requestDocumentId);
 
+            // Ensure directory exists
+            Storage::disk('public')->makeDirectory('requirements');
             // Store file
             $path = $request->file('file')->store('requirements', 'public');
 

@@ -79,6 +79,8 @@ class OfficialsController extends Controller
             $imagePath = null;
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
+                // Ensure directory exists
+                Storage::disk('public')->makeDirectory('officials');
                 $imagePath = $image->store('officials', 'public');
             }
 
@@ -141,6 +143,8 @@ class OfficialsController extends Controller
                     Storage::disk('public')->delete($official->image_path);
                 }
                 $image = $request->file('image');
+                // Ensure directory exists
+                Storage::disk('public')->makeDirectory('officials');
                 $official->image_path = $image->store('officials', 'public');
             }
             if ($request->has('position')) $official->position = $request->position;
