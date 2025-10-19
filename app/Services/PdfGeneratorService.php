@@ -71,14 +71,17 @@ class PdfGeneratorService
         // Generate PDF from HTML
         $pdf = Pdf::loadHTML($htmlTemplate);
 
-        // Generate output filename
-        $outputFilename = 'filled_documents/' . $requestDocument->transaction_id . '_' . time() . '.pdf';
-        $outputPath = Storage::disk('public')->path($outputFilename);
+    // Generate output filename
+    $outputFilename = 'filled_documents/' . $requestDocument->transaction_id . '_' . time() . '.pdf';
+    $outputPath = Storage::disk('public')->path($outputFilename);
 
-        // Save PDF
-        $pdf->save($outputPath);
+    // Ensure directory exists
+    Storage::disk('public')->makeDirectory('filled_documents');
 
-        return $outputFilename;
+    // Save PDF
+    $pdf->save($outputPath);
+
+    return $outputFilename;
     }
 
     /**
@@ -98,14 +101,17 @@ class PdfGeneratorService
         // Generate PDF from HTML
         $pdf = Pdf::loadHTML($htmlContent);
 
-        // Generate output filename
-        $outputFilename = 'filled_documents/' . $requestDocument->transaction_id . '_' . time() . '.pdf';
-        $outputPath = Storage::disk('public')->path($outputFilename);
+    // Generate output filename
+    $outputFilename = 'filled_documents/' . $requestDocument->transaction_id . '_' . time() . '.pdf';
+    $outputPath = Storage::disk('public')->path($outputFilename);
 
-        // Save PDF
-        $pdf->save($outputPath);
+    // Ensure directory exists
+    Storage::disk('public')->makeDirectory('filled_documents');
 
-        return $outputFilename;
+    // Save PDF
+    $pdf->save($outputPath);
+
+    return $outputFilename;
     }
 
     /**
@@ -142,6 +148,9 @@ class PdfGeneratorService
             // Generate output filename for DOCX
             $outputFilename = 'filled_documents/' . $requestDocument->transaction_id . '_' . time() . '.docx';
             $outputPath = Storage::disk('public')->path($outputFilename);
+
+            // Ensure directory exists
+            Storage::disk('public')->makeDirectory('filled_documents');
 
             // Save filled DOCX
             $templateProcessor->saveAs($outputPath);
@@ -248,6 +257,9 @@ class PdfGeneratorService
             $outputFilename = 'filled_documents/' . $requestDocument->transaction_id . '_' . time() . '.pdf';
             $outputPath = Storage::disk('public')->path($outputFilename);
 
+            // Ensure directory exists
+            Storage::disk('public')->makeDirectory('filled_documents');
+
             // Save PDF
             $pdfOutput->save($outputPath);
 
@@ -277,6 +289,9 @@ class PdfGeneratorService
     {
         // Generate output filename
         $outputFilename = 'filled_documents/' . $requestDocument->transaction_id . '_' . time() . '.pdf';
+
+        // Ensure directory exists
+        Storage::disk('public')->makeDirectory('filled_documents');
 
         // Simply copy the original PDF
         Storage::disk('public')->copy(
