@@ -36,7 +36,7 @@ class CertificateLogsController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
+ 
     // 2. Get all certificate logs with filters, pagination, and sorting
     public function index(Request $request)
     {

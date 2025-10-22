@@ -43,7 +43,7 @@ class FeedbackController extends Controller
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'created_at';
         }
-
+ 
         $query->orderBy($sortBy, $order);
 
         // Pagination

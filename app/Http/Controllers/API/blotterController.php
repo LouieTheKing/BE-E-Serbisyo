@@ -37,7 +37,7 @@ class BlotterController extends Controller
                 ->orWhere('complaint_details', 'like', "%$search%");
             });
         }
-
+ 
         // Apply sorting safely
         $allowedSorts = ['case_number', 'date_filed', 'status', 'created_at'];
         if (!in_array($sortBy, $allowedSorts)) {
