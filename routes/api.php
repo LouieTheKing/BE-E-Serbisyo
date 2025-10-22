@@ -11,7 +11,7 @@ use App\Http\Controllers\API\RejectedAccountController;
 use App\Http\Controllers\API\AnnouncementController;
 use App\Http\Controllers\API\BlotterController;
 use App\Http\Controllers\API\FeedbackController;
-use App\Http\Controllers\API\activityLogsController;
+use App\Http\Controllers\API\ActivityLogsController;
 use App\Http\Controllers\API\DashboardController;
 
 // Auth Routes
@@ -93,9 +93,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/feedback/delete', [FeedbackController::class, 'destroy']);
 
     // Activity Logs Routes
-    Route::get('/activitylogs', [activityLogsController::class, 'index']);
-    Route::get('/activitylogs/{id}', [activityLogsController::class, 'show']);
-    Route::delete('/activitylogs/{id}', [activityLogsController::class, 'destroy']);
+    Route::get('/activitylogs', [ActivityLogsController::class, 'index']);
+    Route::get('/activitylogs/{id}', [ActivityLogsController::class, 'show']);
+    Route::delete('/activitylogs/{id}', [ActivityLogsController::class, 'destroy']);
 
     // Config Routes
     Route::post('/configs/create', [\App\Http\Controllers\API\ConfigController::class, 'store']);
