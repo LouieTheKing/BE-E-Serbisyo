@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Blotter Case Filed</title>
+    <title>Sumbong Case Filed</title>
 </head>
 <body style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; background-color:#f4f4f7;">
 
@@ -23,14 +23,14 @@
                         <td style="padding:30px;">
                             <div style="text-align:center; margin-bottom:20px;">
                                 <div style="background:#2196F3; color:white; padding:10px 20px; border-radius:25px; display:inline-block; font-weight:bold;">
-                                    📋 BLOTTER CASE FILED
+                                    📋 SUMBONG CASE FILED
                                 </div>
                             </div>
 
-                            <h2 style="color:#333; margin:0 0 20px 0;">New Blotter Case Filed</h2>
+                            <h2 style="color:#333; margin:0 0 20px 0;">New Sumbong Case Filed</h2>
                             
                             <p style="color:#666; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
-                                A new blotter case has been filed in the system. Here are the details:
+                                A new sumbong case has been filed in the system. Here are the details:
                             </p>
 
                             <div style="background:#f8f9fa; padding:20px; border-radius:8px; margin:20px 0;">

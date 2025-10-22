@@ -65,7 +65,7 @@
                             </div>
 
                             <div style="text-align:center; margin:30px 0;">
-                                <a href="#" style="background:#2196F3; color:white; padding:12px 30px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">
+                                <a href="https://santol-serbisyo.org/register" style="background:#2196F3; color:white; padding:12px 30px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">
                                     Register Again
                                 </a>
                             </div>

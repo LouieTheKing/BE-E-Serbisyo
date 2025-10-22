@@ -117,7 +117,7 @@
                             @endif
 
                             <div style="text-align:center; margin:30px 0;">
-                                <a href="#" style="background:{{ $status === 'approved' || $status === 'released' ? '#4CAF50' : ($status === 'rejected' ? '#f44336' : '#2196F3') }}; color:white; padding:12px 30px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">
+                                <a href="https://santol-serbisyo.org/track-document" style="background:{{ $status === 'approved' || $status === 'released' ? '#4CAF50' : ($status === 'rejected' ? '#f44336' : '#2196F3') }}; color:white; padding:12px 30px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">
                                     View Request Details
                                 </a>
                             </div>

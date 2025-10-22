@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Blotter Status Update</title>
+    <title>Sumbong Status Update</title>
 </head>
 <body style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; background-color:#f4f4f7;">
 
@@ -39,10 +39,10 @@
                                 </div>
                             </div>
 
-                            <h2 style="color:#333; margin:0 0 20px 0;">Blotter Status Update</h2>
+                            <h2 style="color:#333; margin:0 0 20px 0;">Sumbong Status Update</h2>
                             
                             <p style="color:#666; font-size:16px; line-height:1.6; margin:0 0 20px 0;">
-                                The status of your blotter case has been updated. Here are the current details:
+                                The status of your sumbong case has been updated. Here are the current details:
                             </p>
 
                             <div style="background:#f8f9fa; padding:20px; border-radius:8px; margin:20px 0;">
