@@ -4,10 +4,14 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Blotter;
+use App\Models\BlotterHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Traits\LogsActivity;
+use App\Mail\BlotterCreatedMail;
+use App\Mail\BlotterStatusUpdateMail;
+use Illuminate\Support\Facades\Mail;
 
 class BlotterController extends Controller
 {
@@ -65,7 +69,7 @@ class BlotterController extends Controller
             'complaint_details' => 'required|string',
             'relief_sought' => 'required|string',
             'date_filed' => 'required|date',
-            'status' => 'in:filed,ongoing,settled',
+            'status' => 'in:filed,ongoing,settled,reopen,unsettled',
             'case_type' => 'required|string|max:255',
         ]);
 
@@ -89,8 +93,26 @@ class BlotterController extends Controller
             'status' => $request->status ?? 'filed',
         ]);
 
+        // Create initial history entry
+        BlotterHistory::create([
+            'case_number' => $blotter->case_number,
+            'status' => $blotter->status,
+            'updated_by' => auth()->id(),
+            'notes' => 'Initial case filing',
+        ]);
+
         // Log the activity
         $this->logActivity('Blotter Management', "Created new blotter case: {$caseNumber}");
+
+        // Send email notification to the complainant (if email is available)
+        if ($blotter->createdBy && $blotter->createdBy->email) {
+            try {
+                Mail::to($blotter->createdBy->email)->send(new BlotterCreatedMail($blotter));
+            } catch (\Exception $e) {
+                // Log email error but don't fail the request
+                \Log::error("Failed to send blotter creation email: " . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -104,7 +126,7 @@ class BlotterController extends Controller
      */
     public function show($case_number)
     {
-        $blotter = Blotter::with(['createdBy', 'receivedBy'])
+        $blotter = Blotter::with(['createdBy', 'statusHistory.updatedBy'])
             ->where('case_number', $case_number)
             ->first();
 
@@ -138,7 +160,6 @@ class BlotterController extends Controller
             'relief_sought' => 'sometimes|string',
             'case_type' => 'sometimes|string|max:255',
             'date_filed' => 'sometimes|date',
-            'status' => 'sometimes|in:filed,ongoing,settled',
         ]);
 
         if ($validator->fails()) {
@@ -172,6 +193,88 @@ class BlotterController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Blotter deleted successfully'
+        ]);
+    }
+
+    /**
+     * Update blotter status with email notification
+     */
+    public function updateStatus(Request $request, $case_number)
+    {
+        $blotter = Blotter::where('case_number', $case_number)->firstOrFail();
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:filed,ongoing,settled,reopen,unsettled',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        // Store old status for email notification
+        $oldStatus = $blotter->status;
+        $newStatus = $request->status;
+
+        // Update only if status is different
+        if ($oldStatus !== $newStatus) {
+            $blotter->update(['status' => $newStatus]);
+
+            // Create history entry
+            BlotterHistory::create([
+                'case_number' => $blotter->case_number,
+                'status' => $newStatus,
+                'updated_by' => auth()->id(),
+                'notes' => $request->notes,
+            ]);
+
+            // Log the activity
+            $this->logActivity('Blotter Management', "Updated blotter case status from {$oldStatus} to {$newStatus}: {$blotter->case_number}");
+
+            // Send email notification to the complainant (if email is available)
+            if ($blotter->createdBy && $blotter->createdBy->email) {
+                try {
+                    Mail::to($blotter->createdBy->email)->send(new BlotterStatusUpdateMail($blotter, $oldStatus));
+                } catch (\Exception $e) {
+                    // Log email error but don't fail the request
+                    \Log::error("Failed to send blotter status update email: " . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Blotter status updated successfully',
+                'data' => $blotter,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No status change detected'
+        ], 400);
+    }
+
+    /**
+     * Get blotter status history
+     */
+    public function getHistory($case_number)
+    {
+        $blotter = Blotter::where('case_number', $case_number)->firstOrFail();
+        
+        $history = BlotterHistory::with(['updatedBy'])
+            ->where('case_number', $case_number)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'case_number' => $case_number,
+                'current_status' => $blotter->status,
+                'history' => $history
+            ]
         ]);
     }
 }

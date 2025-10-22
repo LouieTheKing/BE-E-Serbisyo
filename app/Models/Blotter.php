@@ -37,8 +37,12 @@ class Blotter extends Model
         return $this->belongsTo(Account::class, 'created_by');
     }
 
-    public function receivedBy()
+    /**
+     * Get the status history for this blotter
+     */
+    public function statusHistory()
     {
-        return $this->belongsTo(Account::class, 'received_by');
+        return $this->hasMany(BlotterHistory::class, 'case_number', 'case_number')
+                    ->orderBy('created_at', 'desc');
     }
 }
