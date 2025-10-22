@@ -208,6 +208,20 @@ class OfficialsController extends Controller
         try {
             $query = Official::with('account');
 
+            // Search functionality
+            if ($request->filled('search')) {
+                $search = $request->query('search');
+                $query->where(function($q) use ($search) {
+                    $q->where('position', 'like', "%{$search}%")
+                      ->orWhereHas('account', function($qa) use ($search) {
+                          $qa->where('first_name', 'like', "%{$search}%")
+                             ->orWhere('last_name', 'like', "%{$search}%")
+                             ->orWhere('middle_name', 'like', "%{$search}%")
+                             ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$search}%"]);
+                      });
+                });
+            }
+
             if ($status) {
                 $query->where('status', $status);
             }

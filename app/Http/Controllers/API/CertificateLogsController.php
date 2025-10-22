@@ -42,6 +42,22 @@ class CertificateLogsController extends Controller
     {
         $query = CertificateLog::query();
 
+        // Enhanced search functionality
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function($q) use ($search) {
+                $q->where('remark', 'like', "%{$search}%")
+                  ->orWhereHas('documentRequest', function($qd) use ($search) {
+                      $qd->where('transaction_id', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('staffAccount', function($qs) use ($search) {
+                      $qs->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%")
+                         ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$search}%"]);
+                  });
+            });
+        }
+
         // Filters
         if ($request->has('document_request')) {
             $query->where('document_request', $request->input('document_request'));

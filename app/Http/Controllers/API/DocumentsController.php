@@ -20,6 +20,15 @@ class DocumentsController extends Controller
         try {
             $query = Document::query();
 
+            // Search functionality
+            if ($request->filled('search')) {
+                $search = $request->query('search');
+                $query->where(function($q) use ($search) {
+                    $q->where('document_name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+
             // Filter by status
             if ($request->has('status')) {
                 $query->where('status', $request->status);

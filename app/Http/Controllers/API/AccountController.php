@@ -138,6 +138,19 @@ class AccountController extends Controller
         $perPage = $request->query('per_page', 10);
         $query = Account::query()->with('accountProof');
 
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('middle_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$search}%"])
+                  ->orWhereRaw("CONCAT(first_name, ' ', middle_name, ' ', last_name) like ?", ["%{$search}%"]);
+            });
+        }
+
         // Filter by type
         if ($request->has('type')) {
             $query->where('type', $request->query('type'));
