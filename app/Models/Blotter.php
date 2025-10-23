@@ -21,12 +21,29 @@ class Blotter extends Model
         'received_by',
         'created_by',
         'status',
+        'attached_proof',
     ];
 
     protected $casts = [
         'additional_respondent' => 'array',
         'date_filed' => 'date',
     ];
+
+    /**
+     * The accessors to append to the model's array form.
+     */
+    protected $appends = ['attached_proof_url'];
+
+    /**
+     * Get the full URL for the attached proof image
+     */
+    public function getAttachedProofUrlAttribute()
+    {
+        if ($this->attached_proof) {
+            return asset('storage/' . $this->attached_proof);
+        }
+        return null;
+    }
 
     public function creator()
     {

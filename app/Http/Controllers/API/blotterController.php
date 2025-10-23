@@ -12,6 +12,7 @@ use App\Traits\LogsActivity;
 use App\Mail\BlotterCreatedMail;
 use App\Mail\BlotterStatusUpdateMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class BlotterController extends Controller
 {
@@ -71,6 +72,7 @@ class BlotterController extends Controller
             'date_filed' => 'required|date',
             'status' => 'in:filed,ongoing,settled,reopen,unsettled',
             'case_type' => 'required|string|max:255',
+            'attached_proof' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:4096',
         ]);
 
         if ($validator->fails()) {
@@ -78,6 +80,22 @@ class BlotterController extends Controller
         }
 
         $caseNumber = strtoupper('BLT-' . date('Ymd') . '-' . Str::random(5));
+
+        // Handle file upload if provided
+        $attachedProofPath = null;
+        if ($request->hasFile('attached_proof')) {
+            try {
+                $file = $request->file('attached_proof');
+                $fileName = $caseNumber . '_proof_' . time() . '.' . $file->getClientOriginalExtension();
+                $attachedProofPath = $file->storeAs('blotter_proofs', $fileName, 'public');
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to upload attached proof',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+        }
 
         $blotter = Blotter::create([
             'case_number' => $caseNumber,
@@ -91,6 +109,7 @@ class BlotterController extends Controller
             'received_by' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
             'created_by' => auth()->id(),
             'status' => $request->status ?? 'filed',
+            'attached_proof' => $attachedProofPath,
         ]);
 
         // Create initial history entry
@@ -184,6 +203,11 @@ class BlotterController extends Controller
     public function destroy($case_number)
     {
         $blotter = Blotter::where('case_number', $case_number)->firstOrFail();
+
+        // Delete attached proof file if exists
+        if ($blotter->attached_proof && Storage::disk('public')->exists($blotter->attached_proof)) {
+            Storage::disk('public')->delete($blotter->attached_proof);
+        }
 
         // Log the activity before deletion
         $this->logActivity('Blotter Management', "Deleted blotter case: {$blotter->case_number}");
