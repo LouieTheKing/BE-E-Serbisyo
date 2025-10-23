@@ -34,14 +34,6 @@ class ActivityLogsController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Alternative: if you want to use a single date_range parameter
-        if ($request->filled('date_range')) {
-            $dateRange = explode(' to ', $request->date_range);
-            if (count($dateRange) === 2) {
-                $query->whereDate('created_at', '>=', trim($dateRange[0]))
-                      ->whereDate('created_at', '<=', trim($dateRange[1]));
-            }
-        }
 
         if ($request->filled('search')) {
             $search = $request->search;
