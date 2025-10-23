@@ -161,12 +161,29 @@ class AccountController extends Controller
             $query->where('status', $request->query('status'));
         }
 
+        // Filter by age range
+        if ($request->has('min_age') || $request->has('max_age')) {
+            $currentDate = now();
+            
+            if ($request->has('min_age')) {
+                $minAge = (int) $request->query('min_age');
+                $maxBirthDate = $currentDate->copy()->subYears($minAge)->format('Y-m-d');
+                $query->where('birthday', '<=', $maxBirthDate);
+            }
+            
+            if ($request->has('max_age')) {
+                $maxAge = (int) $request->query('max_age');
+                $minBirthDate = $currentDate->copy()->subYears($maxAge + 1)->addDay()->format('Y-m-d');
+                $query->where('birthday', '>=', $minBirthDate);
+            }
+        }
+
         // Sorting
         $sortBy = $request->query('sort_by', 'created_at'); // default sort by date
         $order = $request->query('order', 'desc'); // default descending
 
         // Validate allowed columns
-        $allowedSorts = ['name', 'created_at'];
+        $allowedSorts = ['name', 'created_at', 'age'];
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'created_at';
         }
@@ -174,6 +191,9 @@ class AccountController extends Controller
         // If sorting by name, use last_name + first_name
         if ($sortBy === 'name') {
             $query->orderBy('last_name', $order)->orderBy('first_name', $order);
+        } elseif ($sortBy === 'age') {
+            // Sort by birthday in reverse order (older birthdays = older age)
+            $query->orderBy('birthday', $order === 'asc' ? 'desc' : 'asc');
         } else {
             $query->orderBy($sortBy, $order);
         }
