@@ -106,7 +106,7 @@ class BlotterController extends Controller
             'case_type' => $request->case_type,
             'relief_sought' => $request->relief_sought,
             'date_filed' => $request->date_filed,
-            'received_by' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
+            'received_by' => auth()->id(),
             'created_by' => auth()->id(),
             'status' => $request->status ?? 'filed',
             'attached_proof' => $attachedProofPath,
@@ -145,9 +145,7 @@ class BlotterController extends Controller
      */
     public function show($case_number)
     {
-        $blotter = Blotter::with(['createdBy'])
-            ->where('case_number', $case_number)
-            ->first();
+        $blotter = Blotter::where('case_number', $case_number)->first();
 
         if (!$blotter) {
             return response()->json([
@@ -156,7 +154,8 @@ class BlotterController extends Controller
             ], 404);
         }
 
-        // Load status history separately to avoid eager loading issues
+        // Load relationships separately to avoid conflicts
+        $blotter->load('createdBy');
         $blotter->load(['statusHistory' => function($query) {
             $query->with('updatedBy')->orderBy('created_at', 'desc');
         }]);
