@@ -27,7 +27,7 @@ class BlotterController extends Controller
         $sortBy = $request->get('sort_by', 'created_at'); // column to sort
         $sortOrder = $request->get('order', 'desc'); // asc or desc
 
-        $query = Blotter::with('creator');
+        $query = Blotter::with('createdBy');
 
         if ($status) {
             $query->where('status', $status);
@@ -145,7 +145,7 @@ class BlotterController extends Controller
      */
     public function show($case_number)
     {
-        $blotter = Blotter::with(['createdBy', 'statusHistory.updatedBy'])
+        $blotter = Blotter::with(['createdBy'])
             ->where('case_number', $case_number)
             ->first();
 
@@ -155,6 +155,11 @@ class BlotterController extends Controller
                 'message' => 'Blotter not found'
             ], 404);
         }
+
+        // Load status history separately to avoid eager loading issues
+        $blotter->load(['statusHistory' => function($query) {
+            $query->with('updatedBy')->orderBy('created_at', 'desc');
+        }]);
 
         return response()->json([
             'success' => true,
