@@ -106,7 +106,7 @@ class BlotterController extends Controller
             'case_type' => $request->case_type,
             'relief_sought' => $request->relief_sought,
             'date_filed' => $request->date_filed,
-            'received_by' => auth()->id(),
+            'received_by' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
             'created_by' => auth()->id(),
             'status' => $request->status ?? 'filed',
             'attached_proof' => $attachedProofPath,

@@ -55,14 +55,6 @@ class Blotter extends Model
     }
 
     /**
-     * Get the account that received this blotter
-     */
-    public function receivedBy()
-    {
-        return $this->belongsTo(Account::class, 'received_by');
-    }
-
-    /**
      * Get the status history for this blotter
      */
     public function statusHistory()
