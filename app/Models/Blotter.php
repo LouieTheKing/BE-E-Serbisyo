@@ -44,7 +44,7 @@ class Blotter extends Model
         }
         return null;
     }
-
+ 
     /**
      * Get the account that created this blotter
      */
