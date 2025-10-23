@@ -14,23 +14,6 @@ class ActivityLogsController extends Controller
      */
     public function index(Request $request)
     {
-        // Validate date inputs
-        $validator = Validator::make($request->all(), [
-            'date_from' => 'nullable|date_format:Y-m-d',
-            'date_to' => 'nullable|date_format:Y-m-d',
-            'per_page' => 'nullable|integer|min:1|max:100',
-            'page' => 'nullable|integer|min:1',
-            'sort_by' => 'nullable|string|in:created_at,account,module,remark',
-            'order' => 'nullable|string|in:asc,desc'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'error' => 'Validation failed',
-                'messages' => $validator->errors()
-            ], 400);
-        }
-
         $query = ActivityLog::with('account');
 
         // Filters
@@ -42,15 +25,22 @@ class ActivityLogsController extends Controller
             $query->where('module', 'like', '%' . $request->module . '%');
         }
 
-        // Date range filter with better error handling
+        // Date range filter
         if ($request->filled('date_from')) {
-            $dateFrom = $request->date_from;
-            $query->whereDate('created_at', '>=', $dateFrom);
+            $query->whereDate('created_at', '>=', $request->date_from);
         }
 
         if ($request->filled('date_to')) {
-            $dateTo = $request->date_to;
-            $query->whereDate('created_at', '<=', $dateTo);
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Alternative: if you want to use a single date_range parameter
+        if ($request->filled('date_range')) {
+            $dateRange = explode(' to ', $request->date_range);
+            if (count($dateRange) === 2) {
+                $query->whereDate('created_at', '>=', trim($dateRange[0]))
+                      ->whereDate('created_at', '<=', trim($dateRange[1]));
+            }
         }
 
         if ($request->filled('search')) {
@@ -62,41 +52,19 @@ class ActivityLogsController extends Controller
         }
 
         // Sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('order', 'desc');
+        $sortBy = $request->get('sort_by', 'created_at'); // default column
+        $sortOrder = $request->get('order', 'desc'); // default order
 
         $allowedSorts = ['created_at', 'account', 'module', 'remark'];
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'created_at';
         }
 
-        if (!in_array($sortOrder, ['asc', 'desc'])) {
-            $sortOrder = 'desc';
-        }
-
         $perPage = $request->get('per_page', 10);
-        $perPage = max(1, min(100, (int)$perPage)); // Ensure it's between 1 and 100
 
         $logs = $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
 
-        return response()->json([
-            'data' => $logs->items(),
-            'current_page' => $logs->currentPage(),
-            'last_page' => $logs->lastPage(),
-            'per_page' => $logs->perPage(),
-            'total' => $logs->total(),
-            'from' => $logs->firstItem(),
-            'to' => $logs->lastItem(),
-            'filters_applied' => [
-                'date_from' => $request->date_from,
-                'date_to' => $request->date_to,
-                'account' => $request->account,
-                'module' => $request->module,
-                'search' => $request->search,
-                'sort_by' => $sortBy,
-                'order' => $sortOrder
-            ]
-        ]);
+        return response()->json($logs);
     }
 
 
