@@ -45,10 +45,9 @@ class Blotter extends Model
         return null;
     }
 
-    public function creator()
-    {
-        return $this->belongsTo(Account::class, 'created_by');
-    }
+    /**
+     * Get the account that created this blotter
+     */
     public function createdBy()
     {
         return $this->belongsTo(Account::class, 'created_by');

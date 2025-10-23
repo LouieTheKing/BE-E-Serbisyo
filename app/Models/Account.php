@@ -50,9 +50,20 @@ class Account extends Authenticatable
         return $this->hasMany(RequestDocument::class, 'requestor');
     }
 
+    /**
+     * Get blotters created by this account
+     */
     public function blotters()
     {
-        return $this->hasMany(Blotter::class, 'reporter');
+        return $this->hasMany(Blotter::class, 'created_by');
+    }
+
+    /**
+     * Get blotter history updates made by this account
+     */
+    public function blotterHistoryUpdates()
+    {
+        return $this->hasMany(BlotterHistory::class, 'updated_by');
     }
 
     public function feedbacks()

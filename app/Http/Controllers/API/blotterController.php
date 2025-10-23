@@ -27,7 +27,7 @@ class BlotterController extends Controller
         $sortBy = $request->get('sort_by', 'created_at'); // column to sort
         $sortOrder = $request->get('order', 'desc'); // asc or desc
 
-        $query = Blotter::with('createdBy');
+        $query = Blotter::with(['createdBy:id,first_name,last_name,email']);
 
         if ($status) {
             $query->where('status', $status);
@@ -123,6 +123,9 @@ class BlotterController extends Controller
         // Log the activity
         $this->logActivity('Blotter Management', "Created new blotter case: {$caseNumber}");
 
+        // Load the created blotter with its relationships
+        $blotter->load('createdBy:id,first_name,last_name,email');
+
         // Send email notification to the complainant (if email is available)
         if ($blotter->createdBy && $blotter->createdBy->email) {
             try {
@@ -145,7 +148,13 @@ class BlotterController extends Controller
      */
     public function show($case_number)
     {
-        $blotter = Blotter::where('case_number', $case_number)->first();
+        $blotter = Blotter::with([
+            'createdBy:id,first_name,last_name,email',
+            'statusHistory' => function($query) {
+                $query->with('updatedBy:id,first_name,last_name,email')
+                      ->orderBy('created_at', 'desc');
+            }
+        ])->where('case_number', $case_number)->first();
 
         if (!$blotter) {
             return response()->json([
@@ -153,12 +162,6 @@ class BlotterController extends Controller
                 'message' => 'Blotter not found'
             ], 404);
         }
-
-        // Load relationships separately to avoid conflicts
-        $blotter->load('createdBy');
-        $blotter->load(['statusHistory' => function($query) {
-            $query->with('updatedBy')->orderBy('created_at', 'desc');
-        }]);
 
         return response()->json([
             'success' => true,
@@ -193,6 +196,9 @@ class BlotterController extends Controller
 
         // Log the activity
         $this->logActivity('Blotter Management', "Updated blotter case: {$blotter->case_number}");
+
+        // Load relationships for response
+        $blotter->load('createdBy:id,first_name,last_name,email');
 
         return response()->json([
             'success' => true,
@@ -259,6 +265,9 @@ class BlotterController extends Controller
             // Log the activity
             $this->logActivity('Blotter Management', "Updated blotter case status from {$oldStatus} to {$newStatus}: {$blotter->case_number}");
 
+            // Load relationships for response
+            $blotter->load('createdBy:id,first_name,last_name,email');
+
             // Send email notification to the complainant (if email is available)
             if ($blotter->createdBy && $blotter->createdBy->email) {
                 try {
@@ -289,9 +298,16 @@ class BlotterController extends Controller
      */
     public function getHistory($case_number)
     {
-        $blotter = Blotter::where('case_number', $case_number)->firstOrFail();
+        $blotter = Blotter::where('case_number', $case_number)->first();
         
-        $history = BlotterHistory::with(['updatedBy'])
+        if (!$blotter) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Blotter not found'
+            ], 404);
+        }
+        
+        $history = BlotterHistory::with(['updatedBy:id,first_name,last_name,email'])
             ->where('case_number', $case_number)
             ->orderBy('created_at', 'desc')
             ->get();
