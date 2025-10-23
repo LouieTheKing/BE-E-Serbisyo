@@ -11,6 +11,7 @@ use App\Models\Blotter;
 use App\Models\Feedback;
 use App\Models\CertificateLog;
 use App\Models\ActivityLog;
+use Carbon\Carbon;
 
 class Account extends Authenticatable
 {
@@ -44,6 +45,20 @@ class Account extends Authenticatable
     protected $hidden = [
         'password',
     ];
+
+    protected $appends = ['age'];
+
+    /**
+     * Get the age attribute based on birthday
+     */
+    public function getAgeAttribute()
+    {
+        if (!$this->birthday) {
+            return null;
+        }
+        
+        return Carbon::parse($this->birthday)->age;
+    }
 
     public function requestDocuments()
     {
