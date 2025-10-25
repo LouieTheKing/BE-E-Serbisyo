@@ -164,17 +164,43 @@ class AccountController extends Controller
         // Filter by age range
         if ($request->has('min_age') || $request->has('max_age')) {
             $currentDate = now();
-            
+
             if ($request->has('min_age')) {
                 $minAge = (int) $request->query('min_age');
                 $maxBirthDate = $currentDate->copy()->subYears($minAge)->format('Y-m-d');
                 $query->where('birthday', '<=', $maxBirthDate);
             }
-            
+
             if ($request->has('max_age')) {
                 $maxAge = (int) $request->query('max_age');
                 $minBirthDate = $currentDate->copy()->subYears($maxAge + 1)->addDay()->format('Y-m-d');
                 $query->where('birthday', '>=', $minBirthDate);
+            }
+        }
+
+        // Filter by PWD presence (pwd=1/true/yes => has PWD number, pwd=0/false/no => no PWD number)
+        if ($request->has('pwd')) {
+            $val = strtolower($request->query('pwd'));
+            $truthy = ['1', 'true', 'yes', 'y'];
+            if (in_array($val, $truthy, true)) {
+                $query->whereNotNull('pwd_number')->where('pwd_number', '<>', '');
+            } else {
+                $query->where(function($q) {
+                    $q->whereNull('pwd_number')->orWhere('pwd_number', '');
+                });
+            }
+        }
+
+        // Filter by single parent presence (single_parent=1/true/yes => has single parent number, 0/false/no => none)
+        if ($request->has('single_parent')) {
+            $val = strtolower($request->query('single_parent'));
+            $truthy = ['1', 'true', 'yes', 'y'];
+            if (in_array($val, $truthy, true)) {
+                $query->whereNotNull('single_parent_number')->where('single_parent_number', '<>', '');
+            } else {
+                $query->where(function($q) {
+                    $q->whereNull('single_parent_number')->orWhere('single_parent_number', '');
+                });
             }
         }
 
