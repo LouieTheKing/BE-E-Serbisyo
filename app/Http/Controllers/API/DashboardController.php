@@ -354,14 +354,17 @@ class DashboardController extends Controller
         $sortBy = $request->input('sort_by', 'count');
         $order = $request->input('order', 'desc');
 
-        $stats = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
-            ->select('document', DB::raw('count(*) as count'))
-            ->groupBy('document')
+        // Join with documents table to get the document name
+        $stats = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+            ->join('documents', 'request_documents.document', '=', 'documents.id')
+            ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as count'))
+            ->groupBy('documents.id', 'documents.document_name')
             ->orderBy('count', $order)
             ->get()
             ->map(function ($item) {
                 return [
-                    'document_id' => $item->document,
+                    'document_id' => $item->document_id,
+                    'document_name' => $item->document_name,
                     'count' => $item->count
                 ];
             });
@@ -415,15 +418,18 @@ class DashboardController extends Controller
         $dateTo = $request->input('date_to', Carbon::now());
         $limit = $request->input('limit', 10);
 
-        $topDocuments = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
-            ->select('document', DB::raw('count(*) as total_requests'))
-            ->groupBy('document')
+        // Join with documents table to include document name
+        $topDocuments = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+            ->join('documents', 'request_documents.document', '=', 'documents.id')
+            ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as total_requests'))
+            ->groupBy('documents.id', 'documents.document_name')
             ->orderByDesc('total_requests')
             ->limit($limit)
             ->get()
             ->map(function ($item) {
                 return [
-                    'document_id' => $item->document,
+                    'document_id' => $item->document_id,
+                    'document_name' => $item->document_name,
                     'total_requests' => $item->total_requests
                 ];
             });
