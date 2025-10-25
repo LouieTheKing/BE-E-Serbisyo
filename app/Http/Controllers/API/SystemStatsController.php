@@ -49,19 +49,17 @@ class SystemStatsController extends Controller
         $dateFromStr = $dateFrom->format('Y-m-d H:i:s');
         $dateToStr = $dateTo->format('Y-m-d H:i:s');
 
+        // Debug: Remove date range filter to check if counts work without it
         $seniorCitizen = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND birthday IS NOT NULL AND TIMESTAMPDIFF(YEAR, birthday, CURDATE()) >= 60",
-            [$dateFromStr, $dateToStr]
+            "SELECT COUNT(*) as count FROM accounts WHERE birthday IS NOT NULL AND TIMESTAMPDIFF(YEAR, birthday, CURDATE()) >= 60"
         )->count;
 
         $totalPWD = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND pwd_number IS NOT NULL AND pwd_number <> ''",
-            [$dateFromStr, $dateToStr]
+            "SELECT COUNT(*) as count FROM accounts WHERE pwd_number IS NOT NULL AND pwd_number <> ''"
         )->count;
 
         $totalSingleParent = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND single_parent_number IS NOT NULL AND single_parent_number <> ''",
-            [$dateFromStr, $dateToStr]
+            "SELECT COUNT(*) as count FROM accounts WHERE single_parent_number IS NOT NULL AND single_parent_number <> ''"
         )->count;
 
         // Requests within date range
