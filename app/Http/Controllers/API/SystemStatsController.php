@@ -62,7 +62,7 @@ class SystemStatsController extends Controller
             ->count();
 
         // Requests within date range
-        $filteredRequests = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo]);
+        $filteredRequests = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo]);
 
         $totalRequests = (clone $filteredRequests)->count();
         $completedRequests = (clone $filteredRequests)->where('status', 'released')->count();
