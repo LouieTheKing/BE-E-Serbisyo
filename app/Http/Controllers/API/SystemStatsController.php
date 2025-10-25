@@ -55,12 +55,12 @@ class SystemStatsController extends Controller
         )->count;
 
         $totalPWD = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND pwd_number IS NOT NULL ''",
+            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND pwd_number IS NOT NULL AND pwd_number <> ''",
             [$dateFromStr, $dateToStr]
         )->count;
 
         $totalSingleParent = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND single_parent_number IS NOT NULL''",
+            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND single_parent_number IS NOT NULL AND single_parent_number <> ''",
             [$dateFromStr, $dateToStr]
         )->count;
 
