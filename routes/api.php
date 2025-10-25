@@ -13,6 +13,7 @@ use App\Http\Controllers\API\BlotterController;
 use App\Http\Controllers\API\FeedbackController;
 use App\Http\Controllers\API\ActivityLogsController;
 use App\Http\Controllers\API\DashboardController;
+use App\Http\Controllers\API\SystemStatsController;
 
 // Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -122,6 +123,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Document analytics
         Route::get('/document-types', [DashboardController::class, 'documentTypeStatistics']);
         Route::get('/top-documents', [DashboardController::class, 'topDocuments']);
+
+    // System combined stats
+    Route::get('/system-stats', [SystemStatsController::class, 'index']);
 
         // Performance metrics
         Route::get('/performance', [DashboardController::class, 'performanceMetrics']);
