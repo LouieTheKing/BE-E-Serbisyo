@@ -45,21 +45,24 @@ class SystemStatsController extends Controller
             ->value('avg_age');
         $avgAge = $avgAge !== null ? round((float) $avgAge, 2) : 0;
 
-        // Senior citizens (age >= 60), PWD, and single parent (raw SQL for accuracy)
-        $seniorCitizen = (clone $filteredAccounts)
-            ->whereNotNull('birthday')
-            ->whereRaw('TIMESTAMPDIFF(YEAR, birthday, CURDATE()) >= 60')
-            ->count();
+        // Use raw SQL SELECT for senior, PWD, and single parent counts
+        $dateFromStr = $dateFrom->format('Y-m-d H:i:s');
+        $dateToStr = $dateTo->format('Y-m-d H:i:s');
 
-        $totalPWD = (clone $filteredAccounts)
-            ->whereNotNull('pwd_number')
-            ->whereRaw("TRIM(pwd_number) <> ''")
-            ->count();
+        $seniorCitizen = DB::selectOne(
+            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND birthday IS NOT NULL AND TIMESTAMPDIFF(YEAR, birthday, CURDATE()) >= 60",
+            [$dateFromStr, $dateToStr]
+        )->count;
 
-        $totalSingleParent = (clone $filteredAccounts)
-            ->whereNotNull('single_parent_number')
-            ->whereRaw("TRIM(single_parent_number) <> ''")
-            ->count();
+        $totalPWD = DB::selectOne(
+            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND pwd_number IS NOT NULL ''",
+            [$dateFromStr, $dateToStr]
+        )->count;
+
+        $totalSingleParent = DB::selectOne(
+            "SELECT COUNT(*) as count FROM accounts WHERE created_at BETWEEN ? AND ? AND single_parent_number IS NOT NULL''",
+            [$dateFromStr, $dateToStr]
+        )->count;
 
         // Requests within date range
         $filteredRequests = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo]);
