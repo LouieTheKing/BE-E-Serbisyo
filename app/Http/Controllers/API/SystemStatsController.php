@@ -63,10 +63,10 @@ class SystemStatsController extends Controller
             'count' => (int) $mostRequested->total
         ] : null;
 
-        // Average processing time in days (released requests)
+        // Average processing time in minutes (released requests)
         $avgProcessing = RequestDocument::where('status', 'released')
-            ->selectRaw('AVG(DATEDIFF(updated_at, created_at)) as avg_days')
-            ->value('avg_days');
+            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) as avg_minutes')
+            ->value('avg_minutes');
         $avgProcessing = $avgProcessing !== null ? round((float) $avgProcessing, 2) : 0;
 
         // Pending counts
@@ -121,7 +121,7 @@ class SystemStatsController extends Controller
                 'total_requests' => $totalRequests,
                 'completion_rate_percent' => $completionRate,
                 'most_requested_document' => $mostRequestedDoc,
-                'average_processing_time_days' => $avgProcessing,
+                'average_processing_time_minutes' => $avgProcessing,
                 'average_age' => $avgAge,
                 'male_count' => $maleCount,
                 'female_count' => $femaleCount,
