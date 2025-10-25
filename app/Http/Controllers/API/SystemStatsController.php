@@ -45,16 +45,13 @@ class SystemStatsController extends Controller
         $totalPWD = Account::whereNotNull('pwd_number')->where('pwd_number', '<>', '')->count();
         $totalSingleParent = Account::whereNotNull('single_parent_number')->where('single_parent_number', '<>', '')->count();
 
-        // Requests and completion (filtered by provided date range)
-        $totalRequests = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])->count();
-        $completedRequests = RequestDocument::where('status', 'released')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->count();
+        // Requests and completion
+        $totalRequests = RequestDocument::count();
+        $completedRequests = RequestDocument::where('status', 'released')->count();
         $completionRate = $totalRequests > 0 ? round(($completedRequests / $totalRequests) * 100, 2) : 0;
 
         // Most requested document
         $mostRequested = RequestDocument::join('documents', 'request_documents.document', '=', 'documents.id')
-            ->whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
             ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as total'))
             ->groupBy('documents.id', 'documents.document_name')
             ->orderByDesc('total')
@@ -68,16 +65,13 @@ class SystemStatsController extends Controller
 
         // Average processing time in minutes (released requests)
         $avgProcessing = RequestDocument::where('status', 'released')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) as avg_minutes')
             ->value('avg_minutes');
         $avgProcessing = $avgProcessing !== null ? round((float) $avgProcessing, 2) : 0;
 
         // Pending counts
         $pendingAccount = Account::where('status', 'pending')->count();
-        $pendingDocumentRequest = RequestDocument::where('status', 'pending')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->count();
+        $pendingDocumentRequest = RequestDocument::where('status', 'pending')->count();
 
         // User type counts (group by type)
         $userTypes = Account::select('type', DB::raw('count(*) as count'))
