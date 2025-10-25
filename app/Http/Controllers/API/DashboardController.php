@@ -418,18 +418,15 @@ class DashboardController extends Controller
         $dateTo = $request->input('date_to', Carbon::now());
         $limit = $request->input('limit', 10);
 
-        // Join with documents table to include document name
-        $topDocuments = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
-            ->join('documents', 'request_documents.document', '=', 'documents.id')
-            ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as total_requests'))
-            ->groupBy('documents.id', 'documents.document_name')
+        $topDocuments = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->select('document', DB::raw('count(*) as total_requests'))
+            ->groupBy('document')
             ->orderByDesc('total_requests')
             ->limit($limit)
             ->get()
             ->map(function ($item) {
                 return [
-                    'document_id' => $item->document_id,
-                    'document_name' => $item->document_name,
+                    'document_id' => $item->document,
                     'total_requests' => $item->total_requests
                 ];
             });
