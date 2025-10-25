@@ -22,9 +22,14 @@ class SystemStatsController extends Controller
         $dateFrom = $request->input('date_from') ? Carbon::parse($request->input('date_from'))->startOfDay() : Carbon::now()->subMonth()->startOfDay();
         $dateTo = $request->input('date_to') ? Carbon::parse($request->input('date_to'))->endOfDay() : Carbon::now()->endOfDay();
 
-        // Global (non-date-dependent) counts
-        $totalUsers = Account::count();
-        $officials = Official::count();
+    // New accounts within date range
+    $newAccounts = Account::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+
+    // Global (non-date-dependent) counts
+    $totalUsers = Account::count();
+    $officials = Official::count();
+    $activeUsers = Account::where('status', 'active')->count();
+    $inactiveUsers = Account::where('status', 'inactive')->count();
 
         // Filtered accounts (only within date range)
         $filteredAccounts = Account::whereBetween('created_at', [$dateFrom, $dateTo]);
@@ -143,6 +148,9 @@ class SystemStatsController extends Controller
             'success' => true,
             'data' => [
                 'total_users' => $totalUsers,
+                'active_users' => $activeUsers,
+                'inactive_users' => $inactiveUsers,
+                'new_accounts' => $newAccounts,
                 'officials' => $officials,
                 'senior_citizen_60_plus' => $seniorCitizen,
                 'total_pwd' => $totalPWD,

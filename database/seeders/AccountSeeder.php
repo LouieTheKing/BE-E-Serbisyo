@@ -55,5 +55,26 @@ class AccountSeeder extends Seeder
             'civil_status' => 'married'
         ]);
 
+
+        // Account::create([
+        //     'email' => 'residence@santol.com',
+        //     'password' => Hash::make('pass123'),
+        //     'status' => 'active',
+        //     'type' => 'residence',
+        //     'first_name' => 'Juan',
+        //     'last_name' => 'Dela Cruz',
+        //     'sex' => 'Male',
+        //     'nationality' => 'Filipino',
+        //     'birthday' => '1995-05-15',
+        //     'contact_no' => '09987654321',
+        //     'municipality' => 'Sample City',
+        //     'barangay' => 'Barangay Dos',
+        //     'house_no' => '456',
+        //     'street' => 'Second Street',
+        //     'zip_code' => '1001',
+        //     'birth_place' => 'Bulacan',
+        //     'civil_status' => 'married'
+        // ]);
+
     }
 }
