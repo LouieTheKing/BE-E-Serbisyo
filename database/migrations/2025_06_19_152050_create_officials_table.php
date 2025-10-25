@@ -18,7 +18,7 @@ return new class extends Migration
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
             $table->string('position');
-            $table->text('image_path');
+            // $table->text('image_path'); // removed, handled by migration
             $table->date('term_start');
             $table->date('term_end');
             $table->string('status'); // active or inactive
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('officials');
+    Schema::dropIfExists('officials');
     }
 };

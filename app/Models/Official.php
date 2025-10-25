@@ -12,7 +12,6 @@ class Official extends Model
     protected $fillable = [
         'account_id',
         'position',
-        'image_path',
         'term_start',
         'term_end',
         'status'

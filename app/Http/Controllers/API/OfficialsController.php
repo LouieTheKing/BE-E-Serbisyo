@@ -22,7 +22,6 @@ class OfficialsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'position' => 'required|string|max:255',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
             'term_start' => 'required|date',
             'term_end' => 'required|date|after_or_equal:term_start',
             'status' => 'required|in:active,inactive',
@@ -75,20 +74,10 @@ class OfficialsController extends Controller
                 'status' => 'active', // Account is active immediately
             ]);
 
-            // Upload official image
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                // Ensure directory exists
-                Storage::disk('public')->makeDirectory('officials');
-                $imagePath = $image->store('officials', 'public');
-            }
-
             // Create official record
             $official = Official::create([
                 'account_id' => $account->id,
                 'position' => $request->position,
-                'image_path' => $imagePath,
                 'term_start' => $request->term_start,
                 'term_end' => $request->term_end,
                 'status' => $request->status,
@@ -120,7 +109,6 @@ class OfficialsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'position' => 'sometimes|required|string|max:255',
-            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:5120',
             'term_start' => 'sometimes|required|date',
             'term_end' => 'sometimes|required|date|after_or_equal:term_start',
             'status' => 'sometimes|required|in:active,inactive',
@@ -137,16 +125,6 @@ class OfficialsController extends Controller
 
         DB::beginTransaction();
         try {
-            if ($request->hasFile('image')) {
-                // Delete old image if exists
-                if ($official->image_path && Storage::disk('public')->exists($official->image_path)) {
-                    Storage::disk('public')->delete($official->image_path);
-                }
-                $image = $request->file('image');
-                // Ensure directory exists
-                Storage::disk('public')->makeDirectory('officials');
-                $official->image_path = $image->store('officials', 'public');
-            }
             if ($request->has('position')) $official->position = $request->position;
             if ($request->has('term_start')) $official->term_start = $request->term_start;
             if ($request->has('term_end')) $official->term_end = $request->term_end;
