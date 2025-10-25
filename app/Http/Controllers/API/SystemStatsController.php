@@ -45,20 +45,20 @@ class SystemStatsController extends Controller
             ->value('avg_age');
         $avgAge = $avgAge !== null ? round((float) $avgAge, 2) : 0;
 
-        // Senior citizens (filtered)
-        $seniorCutoff = Carbon::now()->subYears(60)->endOfDay();
+        // Senior citizens (filtered, using age >= 60)
         $seniorCitizen = (clone $filteredAccounts)
-            ->whereNotNull('birthday')
-            ->where('birthday', '<=', $seniorCutoff)
-            ->count();
+            ->get()
+            ->filter(function($account) {
+                return $account->age !== null && $account->age >= 60;
+            })->count();
 
-        // PWD and single parent (filtered)
+        // PWD and single parent (filtered, count if not null)
         $totalPWD = (clone $filteredAccounts)
-            ->whereNotNull('pwd_number')->where('pwd_number', '<>', '')
+            ->whereNotNull('pwd_number')
             ->count();
 
         $totalSingleParent = (clone $filteredAccounts)
-            ->whereNotNull('single_parent_number')->where('single_parent_number', '<>', '')
+            ->whereNotNull('single_parent_number')
             ->count();
 
         // Requests within date range
