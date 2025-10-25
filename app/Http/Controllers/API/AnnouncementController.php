@@ -34,9 +34,8 @@ class AnnouncementController extends Controller
         if ($request->filled('search')) {
             $search = $request->query('search');
             $query->where(function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('type', 'like', "%{$search}%");
+                $q->where('description', 'like', "%{$search}%")
+                ->orWhere('type', 'like', "%{$search}%");
             });
         }
 

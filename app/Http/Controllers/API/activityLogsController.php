@@ -47,7 +47,14 @@ class ActivityLogsController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('remark', 'like', "%{$search}%")
-                ->orWhere('module', 'like', "%{$search}%");
+                  ->orWhere('module', 'like', "%{$search}%");
+
+                $q->orWhereHas('account', function ($qa) use ($search) {
+                    $qa->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('middle_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('suffix', 'like', "%{$search}%");
+                });
             });
         }
 
