@@ -17,9 +17,9 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AccountSeeder::class,
-            DocumentSeeder::class,
-            AnnouncementSeeder::class,
-            BlotterSeeder::class,
+            // DocumentSeeder::class,
+            // AnnouncementSeeder::class,
+            // BlotterSeeder::class,
             ConfigSeeder::class,
         ]);
     }

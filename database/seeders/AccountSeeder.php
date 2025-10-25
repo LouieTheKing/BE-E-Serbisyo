@@ -15,7 +15,7 @@ class AccountSeeder extends Seeder
     {
         // Admin account
         Account::create([
-            'email' => 'admin@example.com',
+            'email' => 'admin@santol.com',
             'password' => Hash::make('pass123'),
             'status' => 'active',
             'type' => 'admin',
@@ -36,7 +36,7 @@ class AccountSeeder extends Seeder
 
         // Staff account
         Account::create([
-            'email' => 'staff@example.com',
+            'email' => 'staff@santol.com',
             'password' => Hash::make('pass123'),
             'status' => 'active',
             'type' => 'staff',
@@ -55,25 +55,5 @@ class AccountSeeder extends Seeder
             'civil_status' => 'married'
         ]);
 
-        // Resident account
-        Account::create([
-            'email' => 'residence@example.com',
-            'password' => Hash::make('pass123'),
-            'status' => 'active',
-            'type' => 'residence',
-            'first_name' => 'Maria',
-            'last_name' => 'Santos',
-            'sex' => 'Female',
-            'nationality' => 'Filipino',
-            'birthday' => '2000-08-20',
-            'contact_no' => '09111222333',
-            'municipality' => 'Sample City',
-            'barangay' => 'Barangay Tres',
-            'house_no' => '789',
-            'street' => 'Third Street',
-            'zip_code' => '1002',
-            'birth_place' => 'Bulacan',
-            'civil_status' => 'widowed'
-        ]);
     }
 }
