@@ -26,9 +26,10 @@ class SystemStatsController extends Controller
         $totalUsers = Account::count();
         $officials = Official::count();
 
-        // Gender breakdown (case-insensitive)
-        $maleCount = Account::whereRaw('LOWER(sex) = ?', ['male'])->count();
-        $femaleCount = Account::whereRaw('LOWER(sex) = ?', ['female'])->count();
+    // Gender breakdown (tolerant of variants like 'M','F','Male','Female', trailing spaces or NULL)
+    // Normalize via LOWER(TRIM(...)) and match common variants
+    $maleCount = Account::whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['male', 'm'])->count();
+    $femaleCount = Account::whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['female', 'f'])->count();
 
         // Average age (in years) for accounts with birthday set; fallback to 0 when none
         $avgAge = Account::whereNotNull('birthday')
