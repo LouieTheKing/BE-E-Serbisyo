@@ -26,15 +26,15 @@ class SystemStatsController extends Controller
         $totalUsers = Account::count();
         $officials = Official::count();
 
-        // Gender breakdown
-        $maleCount = Account::where('sex', 'male')->count();
-        $femaleCount = Account::where('sex', 'female')->count();
+        // Gender breakdown (case-insensitive)
+        $maleCount = Account::whereRaw('LOWER(sex) = ?', ['male'])->count();
+        $femaleCount = Account::whereRaw('LOWER(sex) = ?', ['female'])->count();
 
-        // Average age (in years) for accounts with birthday set
+        // Average age (in years) for accounts with birthday set; fallback to 0 when none
         $avgAge = Account::whereNotNull('birthday')
             ->selectRaw('AVG(TIMESTAMPDIFF(YEAR, birthday, CURDATE())) as avg_age')
             ->value('avg_age');
-        $avgAge = $avgAge !== null ? round((float) $avgAge, 2) : null;
+        $avgAge = $avgAge !== null ? round((float) $avgAge, 2) : 0;
 
         // Senior citizens (age 60 and above) — using birthday
         $seniorCutoff = Carbon::now()->subYears(60)->endOfDay();
@@ -71,6 +71,14 @@ class SystemStatsController extends Controller
         // Pending counts
         $pendingAccount = Account::where('status', 'pending')->count();
         $pendingDocumentRequest = RequestDocument::where('status', 'pending')->count();
+
+        // User type counts (group by type)
+        $userTypes = Account::select('type', DB::raw('count(*) as count'))
+            ->groupBy('type')
+            ->get()
+            ->mapWithKeys(function ($item) {
+                return [$item->type => (int) $item->count];
+            });
 
         // Document type distribution (by request count)
         $docTypeDistribution = RequestDocument::join('documents', 'request_documents.document', '=', 'documents.id')
@@ -116,6 +124,7 @@ class SystemStatsController extends Controller
                 'average_age' => $avgAge,
                 'male_count' => $maleCount,
                 'female_count' => $femaleCount,
+                'user_type' => $userTypes,
                 'pending_accounts' => $pendingAccount,
                 'pending_document_requests' => $pendingDocumentRequest,
                 'document_type_distribution' => $docTypeDistribution,
