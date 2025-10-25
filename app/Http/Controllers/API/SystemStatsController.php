@@ -69,12 +69,13 @@ class SystemStatsController extends Controller
         $completionRate = $totalRequests > 0 ? round(($completedRequests / $totalRequests) * 100, 2) : 0;
 
         // Most requested document (filtered)
-        $mostRequested = (clone $filteredRequests)
-            ->join('documents', 'request_documents.document', '=', 'documents.id')
+        $mostRequested = RequestDocument::join('documents', 'request_documents.document', '=', 'documents.id')
+            ->whereBetween('request_documents.created_at', [$dateFrom, $dateTo]) // ✅ disambiguated column
             ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as total'))
             ->groupBy('documents.id', 'documents.document_name')
             ->orderByDesc('total')
             ->first();
+
 
         $mostRequestedDoc = $mostRequested ? [
             'document_id' => $mostRequested->document_id,
