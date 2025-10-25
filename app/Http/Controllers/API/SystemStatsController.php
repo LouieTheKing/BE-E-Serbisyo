@@ -45,19 +45,21 @@ class SystemStatsController extends Controller
             ->value('avg_age');
         $avgAge = $avgAge !== null ? round((float) $avgAge, 2) : 0;
 
-        // Senior citizens, PWD, and single parent (filtered, using PHP for accuracy)
-        $accountsForStats = (clone $filteredAccounts)->get();
-        $seniorCitizen = $accountsForStats->filter(function($account) {
-            return $account->age !== null && $account->age >= 60;
-        })->count();
+        // Senior citizens (age >= 60), PWD, and single parent (raw SQL for accuracy)
+        $seniorCitizen = (clone $filteredAccounts)
+            ->whereNotNull('birthday')
+            ->whereRaw('TIMESTAMPDIFF(YEAR, birthday, CURDATE()) >= 60')
+            ->count();
 
-        $totalPWD = $accountsForStats->filter(function($account) {
-            return $account->pwd_number !== null && trim($account->pwd_number) !== '';
-        })->count();
+        $totalPWD = (clone $filteredAccounts)
+            ->whereNotNull('pwd_number')
+            ->whereRaw("TRIM(pwd_number) <> ''")
+            ->count();
 
-        $totalSingleParent = $accountsForStats->filter(function($account) {
-            return $account->single_parent_number !== null && trim($account->single_parent_number) !== '';
-        })->count();
+        $totalSingleParent = (clone $filteredAccounts)
+            ->whereNotNull('single_parent_number')
+            ->whereRaw("TRIM(single_parent_number) <> ''")
+            ->count();
 
         // Requests within date range
         $filteredRequests = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo]);
