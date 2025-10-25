@@ -1,3 +1,77 @@
+// ...existing code...
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'birthday' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        $account = Account::where('email', $request->email)
+            ->where('birthday', $request->birthday)
+            ->first();
+
+        if (!$account) {
+            return response()->json(['error' => ['credentials' => ['Email and birthday do not match any account.']]], 404);
+        }
+
+        // Generate a new random password
+        $newPassword = \Illuminate\Support\Str::random(10);
+        $account->password = Hash::make($newPassword);
+        $account->save();
+
+        // Send the new password via email
+        Mail::to($account->email)->send(new \App\Mail\AccountRegisteredMail($account, $newPassword));
+
+        // Log the activity
+        if (method_exists($this, 'logActivity')) {
+            $this->logActivity('Account Management', "Password reset via forgot password for user: {$account->email}");
+        }
+
+        return response()->json(['message' => 'A new password has been sent to your email address.']);
+    }
+
+    /**
+     * Forgot password: validate email and birthday, send new password if correct
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'birthday' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        $account = Account::where('email', $request->email)
+            ->where('birthday', $request->birthday)
+            ->first();
+
+        if (!$account) {
+            return response()->json(['error' => ['credentials' => ['Email and birthday do not match any account.']]], 404);
+        }
+
+        // Generate a new random password
+        $newPassword = \Illuminate\Support\Str::random(10);
+        $account->password = Hash::make($newPassword);
+        $account->save();
+
+        // Send the new password via email
+        Mail::to($account->email)->send(new \App\Mail\AccountRegisteredMail($account, $newPassword));
+
+        // Log the activity
+        if (method_exists($this, 'logActivity')) {
+            $this->logActivity('Account Management', "Password reset via forgot password for user: {$account->email}");
+        }
+
+        return response()->json(['message' => 'A new password has been sent to your email address.']);
+    }
+// ...existing code...
 <?php
 
 namespace App\Http\Controllers\API;
@@ -11,6 +85,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\AccountAcceptedMail;
 use App\Mail\AccountRejectedMail;
+use App\Mail\ForgotPasswordMail;
 use Exception;
 use App\Traits\LogsActivity;
 
@@ -255,6 +330,35 @@ class AccountController extends Controller
 
             $account->delete();
             return response()->json(['message' => 'Account rejected and deleted successfully']);
+                    /**
+                     * Forgot password: validate email and birthday, send new password if correct
+                     */
+                    public function forgotPassword(Request $request)
+                    {
+                        $validator = Validator::make($request->all(), [
+                            'email' => 'required|email',
+                            'birthday' => 'required|date',
+                        ]);
+
+                        if ($validator->fails()) {
+                            return response()->json(['error' => $validator->errors()], 422);
+                        }
+
+                        $account = Account::where('email', $request->email)
+                            ->where('birthday', $request->birthday)
+                            ->first();
+
+                        if (!$account) {
+                            return response()->json(['error' => ['credentials' => ['Email and birthday do not match any account.']]], 404);
+                        }
+
+                        // Generate a new random password
+                        $newPassword = \Illuminate\Support\Str::random(10);
+                        $account->password = Hash::make($newPassword);
+                        $account->save();
+
+                        // Send the new password via email
+// ...existing code...
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -339,5 +443,42 @@ class AccountController extends Controller
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+    /**
+     * Forgot password: validate email and birthday, send new password if correct
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'birthday' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        $account = Account::where('email', $request->email)
+            ->where('birthday', $request->birthday)
+            ->first();
+
+        if (!$account) {
+            return response()->json(['error' => ['credentials' => ['Email and birthday do not match any account.']]], 404);
+        }
+
+        // Generate a new random password
+        $newPassword = \Illuminate\Support\Str::random(10);
+        $account->password = Hash::make($newPassword);
+        $account->save();
+
+        // Send the new password via email
+    Mail::to($account->email)->send(new ForgotPasswordMail($account, $newPassword));
+
+        // Log the activity
+        if (method_exists($this, 'logActivity')) {
+            $this->logActivity('Account Management', "Password reset via forgot password for user: {$account->email}");
+        }
+
+        return response()->json(['message' => 'A new password has been sent to your email address.']);
     }
 }

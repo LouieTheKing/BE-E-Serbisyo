@@ -28,6 +28,9 @@ Route::get('/officials/get', [\App\Http\Controllers\API\OfficialsController::cla
 Route::get('/officials/get/{id}', [\App\Http\Controllers\API\OfficialsController::class, 'show']);
 Route::get('/configs', [\App\Http\Controllers\API\ConfigController::class, 'index']);
 
+// Forgot Password (public)
+Route::post('/forgot-password', [AccountController::class, 'forgotPassword']);
+
 // Account Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/add-account', [AuthController::class, 'create_account']);
