@@ -354,17 +354,14 @@ class DashboardController extends Controller
         $sortBy = $request->input('sort_by', 'count');
         $order = $request->input('order', 'desc');
 
-        // Join with documents table to get the document name
-        $stats = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
-            ->join('documents', 'request_documents.document', '=', 'documents.id')
-            ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as count'))
-            ->groupBy('documents.id', 'documents.document_name')
+        $stats = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->select('document', DB::raw('count(*) as count'))
+            ->groupBy('document')
             ->orderBy('count', $order)
             ->get()
             ->map(function ($item) {
                 return [
-                    'document_id' => $item->document_id,
-                    'document_name' => $item->document_name,
+                    'document_id' => $item->document,
                     'count' => $item->count
                 ];
             });
