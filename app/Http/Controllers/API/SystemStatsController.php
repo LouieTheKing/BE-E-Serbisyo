@@ -119,9 +119,8 @@ class SystemStatsController extends Controller
         $pendingAccount = (clone $filteredAccounts)->where('status', 'pending')->count();
         $pendingDocumentRequest = (clone $filteredRequests)->where('status', 'pending')->count();
 
-        // User types (filtered)
-        $userTypes = (clone $filteredAccounts)
-            ->select('type', DB::raw('count(*) as count'))
+        // User types (not filtered by date range)
+        $userTypes = Account::select('type', DB::raw('count(*) as count'))
             ->groupBy('type')
             ->get()
             ->mapWithKeys(fn($item) => [$item->type => (int) $item->count]);
