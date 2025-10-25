@@ -26,6 +26,16 @@ class SystemStatsController extends Controller
         $totalUsers = Account::count();
         $officials = Official::count();
 
+        // Gender breakdown
+        $maleCount = Account::where('sex', 'male')->count();
+        $femaleCount = Account::where('sex', 'female')->count();
+
+        // Average age (in years) for accounts with birthday set
+        $avgAge = Account::whereNotNull('birthday')
+            ->selectRaw('AVG(TIMESTAMPDIFF(YEAR, birthday, CURDATE())) as avg_age')
+            ->value('avg_age');
+        $avgAge = $avgAge !== null ? round((float) $avgAge, 2) : null;
+
         // Senior citizens (age 60 and above) — using birthday
         $seniorCutoff = Carbon::now()->subYears(60)->endOfDay();
         $seniorCitizen = Account::whereNotNull('birthday')->where('birthday', '<=', $seniorCutoff)->count();
@@ -103,6 +113,9 @@ class SystemStatsController extends Controller
                 'completion_rate_percent' => $completionRate,
                 'most_requested_document' => $mostRequestedDoc,
                 'average_processing_time_days' => $avgProcessing,
+                'average_age' => $avgAge,
+                'male_count' => $maleCount,
+                'female_count' => $femaleCount,
                 'pending_accounts' => $pendingAccount,
                 'pending_document_requests' => $pendingDocumentRequest,
                 'document_type_distribution' => $docTypeDistribution,
