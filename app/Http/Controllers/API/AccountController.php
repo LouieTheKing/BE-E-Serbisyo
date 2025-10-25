@@ -366,7 +366,7 @@ class AccountController extends Controller
         $account->save();
 
         // Send the new password via email
-        Mail::to($account->email)->send(new \App\Mail\AccountRegisteredMail($account, $newPassword));
+        Mail::to($account->email)->send(new \App\Mail\ForgotPasswordMail($account, $newPassword));
 
         // Log the activity
         if (method_exists($this, 'logActivity')) {
