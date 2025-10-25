@@ -22,36 +22,55 @@ class SystemStatsController extends Controller
         $dateFrom = $request->input('date_from') ? Carbon::parse($request->input('date_from'))->startOfDay() : Carbon::now()->subMonth()->startOfDay();
         $dateTo = $request->input('date_to') ? Carbon::parse($request->input('date_to'))->endOfDay() : Carbon::now()->endOfDay();
 
-        // Basic counts
+        // Global (non-date-dependent) counts
         $totalUsers = Account::count();
         $officials = Official::count();
 
-    // Gender breakdown (tolerant of variants like 'M','F','Male','Female', trailing spaces or NULL)
-    // Normalize via LOWER(TRIM(...)) and match common variants
-    $maleCount = Account::whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['male', 'm'])->count();
-    $femaleCount = Account::whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['female', 'f'])->count();
+        // Filtered accounts (only within date range)
+        $filteredAccounts = Account::whereBetween('created_at', [$dateFrom, $dateTo]);
 
-        // Average age (in years) for accounts with birthday set; fallback to 0 when none
-        $avgAge = Account::whereNotNull('birthday')
+        // Gender breakdown within date range
+        $maleCount = (clone $filteredAccounts)
+            ->whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['male', 'm'])
+            ->count();
+
+        $femaleCount = (clone $filteredAccounts)
+            ->whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['female', 'f'])
+            ->count();
+
+        // Average age (filtered)
+        $avgAge = (clone $filteredAccounts)
+            ->whereNotNull('birthday')
             ->selectRaw('AVG(TIMESTAMPDIFF(YEAR, birthday, CURDATE())) as avg_age')
             ->value('avg_age');
         $avgAge = $avgAge !== null ? round((float) $avgAge, 2) : 0;
 
-        // Senior citizens (age 60 and above) — using birthday
+        // Senior citizens (filtered)
         $seniorCutoff = Carbon::now()->subYears(60)->endOfDay();
-        $seniorCitizen = Account::whereNotNull('birthday')->where('birthday', '<=', $seniorCutoff)->count();
+        $seniorCitizen = (clone $filteredAccounts)
+            ->whereNotNull('birthday')
+            ->where('birthday', '<=', $seniorCutoff)
+            ->count();
 
-        // PWD and single parent counts (assume presence of pwd_number and single_parent_number)
-        $totalPWD = Account::whereNotNull('pwd_number')->where('pwd_number', '<>', '')->count();
-        $totalSingleParent = Account::whereNotNull('single_parent_number')->where('single_parent_number', '<>', '')->count();
+        // PWD and single parent (filtered)
+        $totalPWD = (clone $filteredAccounts)
+            ->whereNotNull('pwd_number')->where('pwd_number', '<>', '')
+            ->count();
 
-        // Requests and completion
-        $totalRequests = RequestDocument::count();
-        $completedRequests = RequestDocument::where('status', 'released')->count();
+        $totalSingleParent = (clone $filteredAccounts)
+            ->whereNotNull('single_parent_number')->where('single_parent_number', '<>', '')
+            ->count();
+
+        // Requests within date range
+        $filteredRequests = RequestDocument::whereBetween('created_at', [$dateFrom, $dateTo]);
+
+        $totalRequests = (clone $filteredRequests)->count();
+        $completedRequests = (clone $filteredRequests)->where('status', 'released')->count();
         $completionRate = $totalRequests > 0 ? round(($completedRequests / $totalRequests) * 100, 2) : 0;
 
-        // Most requested document
-        $mostRequested = RequestDocument::join('documents', 'request_documents.document', '=', 'documents.id')
+        // Most requested document (filtered)
+        $mostRequested = (clone $filteredRequests)
+            ->join('documents', 'request_documents.document', '=', 'documents.id')
             ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as total'))
             ->groupBy('documents.id', 'documents.document_name')
             ->orderByDesc('total')
@@ -63,42 +82,43 @@ class SystemStatsController extends Controller
             'count' => (int) $mostRequested->total
         ] : null;
 
-        // Average processing time in minutes (released requests)
-        $avgProcessing = RequestDocument::where('status', 'released')
+        // Average processing time (filtered)
+        $avgProcessing = (clone $filteredRequests)
+            ->where('status', 'released')
             ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) as avg_minutes')
             ->value('avg_minutes');
         $avgProcessing = $avgProcessing !== null ? round((float) $avgProcessing, 2) : 0;
 
-        // Pending counts
-        $pendingAccount = Account::where('status', 'pending')->count();
-        $pendingDocumentRequest = RequestDocument::where('status', 'pending')->count();
+        // Pending (filtered)
+        $pendingAccount = (clone $filteredAccounts)->where('status', 'pending')->count();
+        $pendingDocumentRequest = (clone $filteredRequests)->where('status', 'pending')->count();
 
-        // User type counts (group by type)
-        $userTypes = Account::select('type', DB::raw('count(*) as count'))
+        // User types (filtered)
+        $userTypes = (clone $filteredAccounts)
+            ->select('type', DB::raw('count(*) as count'))
             ->groupBy('type')
             ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->type => (int) $item->count];
-            });
+            ->mapWithKeys(fn($item) => [$item->type => (int) $item->count]);
 
-        // Document type distribution (by request count)
-        $docTypeDistribution = RequestDocument::join('documents', 'request_documents.document', '=', 'documents.id')
-            ->whereBetween('request_documents.created_at', [$dateFrom, $dateTo])
+        // Document distribution (filtered)
+        $docTypeDistribution = (clone $filteredRequests)
+            ->join('documents', 'request_documents.document', '=', 'documents.id')
             ->select('documents.id as document_id', 'documents.document_name', DB::raw('count(*) as count'))
             ->groupBy('documents.id', 'documents.document_name')
             ->orderByDesc('count')
             ->get()
-            ->map(function ($item) {
-                return [
-                    'document_id' => $item->document_id,
-                    'document_name' => $item->document_name,
-                    'count' => (int) $item->count
-                ];
-            });
+            ->map(fn($item) => [
+                'document_id' => $item->document_id,
+                'document_name' => $item->document_name,
+                'count' => (int) $item->count
+            ]);
 
-        // Monthly blotter cases and monthly requests — default last 12 months
+        // Monthly breakdown (always past 12 months)
         $months = [];
-        $start = $request->input('start_month') ? Carbon::parse($request->input('start_month'))->startOfMonth() : Carbon::now()->startOfMonth()->subMonths(11);
+        $start = $request->input('start_month')
+            ? Carbon::parse($request->input('start_month'))->startOfMonth()
+            : Carbon::now()->startOfMonth()->subMonths(11);
+
         for ($i = 0; $i < 12; $i++) {
             $mStart = $start->copy()->addMonths($i)->startOfMonth();
             $mEnd = $mStart->copy()->endOfMonth();
@@ -106,7 +126,7 @@ class SystemStatsController extends Controller
             $months[] = [
                 'month' => $mStart->format('Y-m'),
                 'blotter_count' => Blotter::whereBetween('created_at', [$mStart, $mEnd])->count(),
-                'request_count' => RequestDocument::whereBetween('created_at', [$mStart, $mEnd])->count()
+                'request_count' => RequestDocument::whereBetween('created_at', [$mStart, $mEnd])->count(),
             ];
         }
 
@@ -133,8 +153,9 @@ class SystemStatsController extends Controller
             ],
             'date_range' => [
                 'from' => $dateFrom->format('Y-m-d'),
-                'to' => $dateTo->format('Y-m-d')
+                'to' => $dateTo->format('Y-m-d'),
             ]
         ]);
     }
+
 }
