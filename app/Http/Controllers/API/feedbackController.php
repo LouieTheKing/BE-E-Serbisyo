@@ -43,7 +43,7 @@ class FeedbackController extends Controller
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'created_at';
         }
- 
+
         $query->orderBy($sortBy, $order);
 
         // Pagination
@@ -77,9 +77,6 @@ class FeedbackController extends Controller
         }
 
         $feedback = Feedback::create($request->all());
-
-        // Log the activity
-        $this->logActivity('Feedback Management', "Created new feedback (ID: {$feedback->id}) - Category: {$feedback->category}, Rating: {$feedback->rating}/5");
 
         return response()->json([
             'success' => true,
