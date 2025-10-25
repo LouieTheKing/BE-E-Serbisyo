@@ -51,7 +51,7 @@ class ConfigSeeder extends Seeder
             ],
             [
                 'name' => 'logo_url',
-                'value' => null
+                'value' => "https://i.imgur.com/znRIbhG.png"
             ]
         ];
 
