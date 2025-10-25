@@ -48,6 +48,10 @@ class ConfigSeeder extends Seeder
             [
                 'name' => 'barangay',
                 'value' => 'Santol'
+            ],
+            [
+                'name' => 'logo_url',
+                'value' => null
             ]
         ];
 
