@@ -50,20 +50,24 @@ class SystemStatsController extends Controller
         $dateToStr = $dateTo->format('Y-m-d H:i:s');
 
         // Use DATE(created_at) for date range filtering
-        $seniorCitizen = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE DATE(created_at) BETWEEN DATE(?) AND DATE(?) AND birthday IS NOT NULL AND TIMESTAMPDIFF(YEAR, birthday, CURDATE()) >= 60",
-            [$dateFromStr, $dateToStr]
-        )->count;
+        $seniorCitizen = DB::table('accounts')
+            ->whereBetween('created_at', [$dateFromStr, $dateToStr])
+            ->whereNotNull('birthday')
+            ->whereRaw('TIMESTAMPDIFF(YEAR, birthday, CURDATE()) >= 60')
+            ->count();
 
-        $totalPWD = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE DATE(created_at) BETWEEN DATE(?) AND DATE(?) AND pwd_number IS NOT NULL AND pwd_number <> ''",
-            [$dateFromStr, $dateToStr]
-        )->count;
+        $totalPWD = DB::table('accounts')
+            ->whereBetween('created_at', [$dateFromStr, $dateToStr])
+            ->whereNotNull('pwd_number')
+            ->where('pwd_number', '<>', '')
+            ->count();
 
-        $totalSingleParent = DB::selectOne(
-            "SELECT COUNT(*) as count FROM accounts WHERE DATE(created_at) BETWEEN DATE(?) AND DATE(?) AND single_parent_number IS NOT NULL AND single_parent_number <> ''",
-            [$dateFromStr, $dateToStr]
-        )->count;
+        $totalSingleParent = DB::table('accounts')
+            ->whereBetween('created_at', [$dateFromStr, $dateToStr])
+            ->whereNotNull('single_parent_number')
+            ->where('single_parent_number', '<>', '')
+            ->count();
+
 
         // Requests within date range
         $filteredRequests = RequestDocument::whereBetween('request_documents.created_at', [$dateFrom, $dateTo]);
