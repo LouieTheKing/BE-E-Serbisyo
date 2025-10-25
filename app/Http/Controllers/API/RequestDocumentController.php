@@ -238,7 +238,30 @@ class RequestDocumentController extends Controller
     public function show($id)
     {
         $requestDocument = RequestDocument::with(['account', 'documentDetails', 'uploadedRequirements.requirement'])->findOrFail($id);
-        return response()->json($requestDocument);
+
+        // Load blotters for the requestor (if available)
+        $userBlotters = collect();
+        if ($requestDocument->account) {
+            $userBlotters = $requestDocument->account->blotters()
+                ->orderBy('date_filed', 'desc')
+                ->get()
+                ->map(function ($b) {
+                    return [
+                        'id' => $b->id,
+                        'case_number' => $b->case_number,
+                        'case_type' => $b->case_type,
+                        'status' => $b->status,
+                        'date_filed' => $b->date_filed ? (string) $b->date_filed : null,
+                        'complaint_details' => $b->complaint_details,
+                        'attached_proof_url' => $b->attached_proof_url,
+                    ];
+                });
+        }
+
+        return response()->json([
+            'request_document' => $requestDocument,
+            'user_blotters' => $userBlotters,
+        ]);
     }
 
     // 5. Track document by transaction ID
