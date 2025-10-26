@@ -42,6 +42,9 @@ class CertificateLogsController extends Controller
     {
         $query = CertificateLog::query();
 
+        // Always exclude logs where staff is null (created by residents)
+        $query->whereNotNull('staff');
+
         // Enhanced search functionality
         if ($request->filled('search')) {
             $search = $request->query('search');
@@ -57,6 +60,11 @@ class CertificateLogsController extends Controller
                   });
             });
         }
+            // Staff filter (for worker view)
+        if ($request->has('staff')) {
+            $query->where('staff', $request->input('staff'));
+        }
+
 
         // Filters
         if ($request->has('document_request')) {
@@ -96,7 +104,7 @@ class CertificateLogsController extends Controller
         $perPage = $request->input('per_page', 10);
         $logs = $query->with([
             'documentRequest.account',
-            'documentRequest.document',
+            'documentRequest.documentDetails',
             'staffAccount'
         ])->paginate($perPage);
 
@@ -109,7 +117,7 @@ class CertificateLogsController extends Controller
     {
         $log = CertificateLog::with([
             'documentRequest.account',
-            'documentRequest.document',
+            'documentRequest.documentDetails',
             'staffAccount'
         ])->findOrFail($id);
         return response()->json($log);
