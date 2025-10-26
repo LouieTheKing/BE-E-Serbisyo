@@ -22,6 +22,18 @@ class SystemStatsController extends Controller
         $dateFrom = $request->input('date_from') ? Carbon::parse($request->input('date_from'))->startOfDay() : Carbon::now()->subMonth()->startOfDay();
         $dateTo = $request->input('date_to') ? Carbon::parse($request->input('date_to'))->endOfDay() : Carbon::now()->endOfDay();
 
+        // New accounts within date range
+        $newAccountsQuery = Account::whereBetween('created_at', [$dateFrom, $dateTo]);
+        $newAccountsCount = $newAccountsQuery->count();
+        $newMaleCount = (clone $newAccountsQuery)
+            ->whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['male', 'm'])
+            ->count();
+        $newFemaleCount = (clone $newAccountsQuery)
+            ->whereRaw("LOWER(TRIM(COALESCE(sex, ''))) IN (?, ?)", ['female', 'f'])
+            ->count();
+        $dateFrom = $request->input('date_from') ? Carbon::parse($request->input('date_from'))->startOfDay() : Carbon::now()->subMonth()->startOfDay();
+        $dateTo = $request->input('date_to') ? Carbon::parse($request->input('date_to'))->endOfDay() : Carbon::now()->endOfDay();
+
     // New accounts within date range
     $newAccounts = Account::whereBetween('created_at', [$dateFrom, $dateTo])->count();
 
@@ -107,9 +119,8 @@ class SystemStatsController extends Controller
         $pendingAccount = (clone $filteredAccounts)->where('status', 'pending')->count();
         $pendingDocumentRequest = (clone $filteredRequests)->where('status', 'pending')->count();
 
-        // User types (filtered)
-        $userTypes = (clone $filteredAccounts)
-            ->select('type', DB::raw('count(*) as count'))
+        // User types (not filtered by date range)
+        $userTypes = Account::select('type', DB::raw('count(*) as count'))
             ->groupBy('type')
             ->get()
             ->mapWithKeys(fn($item) => [$item->type => (int) $item->count]);
@@ -150,7 +161,9 @@ class SystemStatsController extends Controller
                 'total_users' => $totalUsers,
                 'active_users' => $activeUsers,
                 'inactive_users' => $inactiveUsers,
-                'new_accounts' => $newAccounts,
+                'new_accounts' => $newAccountsCount,
+                'new_accounts_male' => $newMaleCount,
+                'new_accounts_female' => $newFemaleCount,
                 'officials' => $officials,
                 'senior_citizen_60_plus' => $seniorCitizen,
                 'total_pwd' => $totalPWD,
